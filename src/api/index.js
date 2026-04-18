@@ -38,3 +38,28 @@ export const getUserStats = (id) => request.get('/user/' + id + '/stats')
 
 // 获取推荐资料
 export const getResourceList = () => request.get('/resource/list')
+
+// 首页统计
+export const getHomeStats = () => request.get('/home/stats')
+
+// 分类树形列表
+export const getCategoryTree = () => request.get('/category/list')
+
+// 获取随机题目
+export const getRandomQuestion = (categoryId) => request.get('/question/random', { params: { categoryId } })
+
+// 提交答案
+export const submitAnswerAPI = (questionId, userAnswer, answerMode = 1) => 
+  request.post('/answer/submit', null, { params: { questionId, userAnswer, answerMode } })
+
+// 获取答题卡
+export const getAnswerCard = (categoryId) => request.get('/answer/card/' + categoryId)
+
+// 错题列表
+export const getErrorListAPI = (categoryId) => request.get('/error/list', { params: { categoryId } })
+
+// 错题统计
+export const getErrorStatsAPI = () => request.get('/error/stats')
+
+// 移除错题
+export const removeErrorAPI = (questionId) => request.delete('/error/' + questionId)
