@@ -3,6 +3,23 @@
     <!-- Decorative top accent -->
     <div class="accent-line"></div>
     
+    <!-- Progress Card -->
+    <section class="progress-section">
+      <div class="progress-card">
+        <div class="progress-header">
+          <span class="progress-title">Java面试题库</span>
+          <span class="progress-rate">{{ stats.progress }}%</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" :style="{ width: stats.progress + '%' }"></div>
+        </div>
+        <div class="progress-info">
+          <span>已答 {{ stats.answeredCount }} / {{ stats.totalQuestion }} 题</span>
+          <button class="continue-btn" @click="continueAnswer">继续答题</button>
+        </div>
+      </div>
+    </section>
+    
     <!-- Header Section -->
     <header class="hero-section">
       <div class="hero-content">
@@ -54,7 +71,7 @@
         <div class="stat-item" @click="router.push('/collect')">
           <div class="stat-icon">★</div>
           <div class="stat-info">
-            <span class="stat-value">13</span>
+            <span class="stat-value">{{ stats.collectCount }}</span>
             <span class="stat-label">收藏</span>
           </div>
         </div>
@@ -62,7 +79,7 @@
         <div class="stat-item" @click="router.push('/record')">
           <div class="stat-icon">✓</div>
           <div class="stat-info">
-            <span class="stat-value">42</span>
+            <span class="stat-value">{{ stats.answeredCount }}</span>
             <span class="stat-label">已答</span>
           </div>
         </div>
@@ -70,7 +87,7 @@
         <div class="stat-item" @click="router.push('/error')">
           <div class="stat-icon">△</div>
           <div class="stat-info">
-            <span class="stat-value">5</span>
+            <span class="stat-value">{{ stats.errorCount }}</span>
             <span class="stat-label">错题</span>
           </div>
         </div>
@@ -119,13 +136,31 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/store/user'
+import { getHomeStats } from '@/api'
 
 const router = useRouter()
 const userStore = useUserStore()
 const activeTab = ref(0)
+
+const stats = ref({
+  collectCount: 0,
+  answeredCount: 0,
+  errorCount: 0,
+  totalQuestion: 0,
+  progress: 0
+})
+
+onMounted(async () => {
+  try {
+    const data = await getHomeStats()
+    stats.value = data || stats.value
+  } catch (e) {
+    console.error('获取统计数据失败', e)
+  }
+})
 
 const featureItems = [
   { 
@@ -138,7 +173,7 @@ const featureItems = [
     iconText: '✍', 
     label: '模拟答题', 
     desc: '助力面试提分',
-    action: () => router.push('/knowledge')
+    action: () => router.push('/category')
   },
   { 
     iconText: '✕', 
@@ -151,14 +186,27 @@ const featureItems = [
     label: '我的收藏', 
     desc: '收藏的题目',
     action: () => router.push('/collect')
+  },
+  { 
+    iconText: '📝', 
+    label: '做题记录', 
+    desc: '回顾历史答题',
+    action: () => router.push('/record')
+  },
+  { 
+    iconText: '📤', 
+    label: '小程序分享', 
+    desc: '分享给好友',
+    action: () => {}
   }
 ]
 
-const goKnowledge = () => router.push('/knowledge')
+const goKnowledge = () => router.push('/category')
 const goMy = () => {
   activeTab.value = 1
   router.push('/my')
 }
+const continueAnswer = () => router.push('/category')
 </script>
 
 <style scoped>
@@ -181,6 +229,74 @@ const goMy = () => {
   height: 3px;
   background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-accent) 50%, var(--color-primary) 100%);
   z-index: 1000;
+}
+
+/* Progress Section */
+.progress-section {
+  padding: 16px 24px 8px;
+  background: linear-gradient(135deg, #1A1A2E 0%, #2D3748 50%, #1A1A2E 100%);
+}
+
+.progress-card {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.progress-title {
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.progress-rate {
+  color: var(--color-primary);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.progress-bar {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-accent) 100%);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.progress-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.progress-info span {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 12px;
+}
+
+.continue-btn {
+  background: var(--color-primary);
+  color: #fff;
+  border: none;
+  padding: 6px 16px;
+  border-radius: 16px;
+  font-size: 12px;
+  cursor: pointer;
 }
 
 /* Hero Section */
