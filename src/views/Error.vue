@@ -2,38 +2,36 @@
   <div class="error-page">
     <van-nav-bar title="错题本" left-arrow @click-left="router.push('/')" />
     
-    <!-- 分类筛选 -->
-    <div class="category-filter" v-if="categories.length > 0">
-      <van-tabs v-model:active="selectedCategory" @change="onCategoryChange">
-        <van-tab title="全部" :name="null" />
-        <van-tab v-for="cat in categories" :key="cat.id" :title="cat.name" :name="cat.id" />
-      </van-tabs>
-    </div>
-    
-    <!-- 统计 -->
-    <div class="error-stats">
-      <div class="stat-item">
-        <van-icon name="failure" size="24" color="#FF4D4F" />
-        <div class="stat-content">
-          <span class="stat-value">{{ errorList.length }}</span>
-          <span class="stat-label">错题数</span>
-        </div>
+    <!-- 顶部分类标签 -->
+    <div class="category-tags" v-if="categories.length > 0">
+      <div 
+        class="tag-item" 
+        :class="{ active: selectedCategory === null }"
+        @click="selectCategory(null)"
+      >
+        全部
+      </div>
+      <div 
+        v-for="cat in categories" 
+        :key="cat.id"
+        class="tag-item"
+        :class="{ active: selectedCategory === cat.id }"
+        @click="selectCategory(cat.id)"
+      >
+        {{ cat.name }}
       </div>
     </div>
     
     <!-- 错题列表 -->
     <div class="error-list" v-if="errorList.length > 0">
       <div class="error-card" v-for="item in errorList" :key="item.id" @click="goDetail(item)">
-        <div class="card-left">
-          <van-icon name="close-circle" size="24" color="#FF4D4F" />
+        <div class="card-header">
+          <span class="question-preview">{{ item.title }}</span>
+          <van-tag type="danger" size="small">错题</van-tag>
         </div>
-        <div class="card-content">
-          <div class="card-title">{{ item.title }}</div>
-          <div class="card-meta">
-            <span class="wrong-count">错误 {{ item.wrongCount }} 次</span>
-          </div>
+        <div class="card-footer">
+          <span class="wrong-count">错误 {{ item.wrongCount }} 次</span>
         </div>
-        <van-icon name="arrow" size="18" color="#ccc" />
       </div>
     </div>
     
@@ -50,8 +48,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { getErrorListAPI, getCategoryTree, removeErrorAPI } from '@/api'
-import { showToast, showConfirmDialog } from 'vant'
+import { getErrorListAPI, getCategoryTree } from '@/api'
 
 const router = useRouter()
 const errorList = ref([])
@@ -75,7 +72,7 @@ const loadError = async () => {
   }
 }
 
-const onCategoryChange = (id) => {
+const selectCategory = (id) => {
   selectedCategory.value = id
   loadError()
 }
@@ -94,19 +91,6 @@ const goDetail = (item) => {
 
 const goKnowledge = () => router.push('/category')
 
-const removeError = async (questionId) => {
-  try {
-    await showConfirmDialog({ title: '移除错题', message: '确定要移除这道错题吗？' })
-    await removeErrorAPI(questionId)
-    showToast('已移除')
-    loadError()
-  } catch (e) {
-    if (e !== 'cancel') {
-      console.error('移除错题失败', e)
-    }
-  }
-}
-
 onMounted(() => {
   loadCategories()
   loadError()
@@ -117,81 +101,71 @@ onMounted(() => {
 .error-page {
   min-height: 100vh;
   background: #f5f5f5;
+  padding-bottom: 60px;
 }
 
-.category-filter {
+.category-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 16px;
   background: #fff;
 }
 
-.error-stats {
-  display: flex;
-  align-items: center;
-  padding: 16px;
-  background: #fff;
-  margin-bottom: 12px;
+.tag-item {
+  padding: 6px 14px;
+  background: #f5f5f5;
+  border-radius: 16px;
+  font-size: 13px;
+  color: #666;
+  cursor: pointer;
 }
 
-.stat-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.stat-content {
-  display: flex;
-  flex-direction: column;
-}
-
-.stat-value {
-  font-size: 20px;
-  font-weight: 600;
-  color: #ff4d4f;
-}
-
-.stat-label {
-  font-size: 12px;
-  color: #999;
+.tag-item.active {
+  background: #e6f7ff;
+  color: #1890ff;
 }
 
 .error-list {
-  padding: 0 16px;
+  padding: 12px 16px;
 }
 
 .error-card {
-  display: flex;
-  align-items: center;
   background: #fff;
-  border-radius: 8px;
+  border-radius: 12px;
   padding: 16px;
   margin-bottom: 12px;
   cursor: pointer;
 }
 
-.card-left {
-  margin-right: 12px;
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
 }
 
-.card-content {
+.question-preview {
   flex: 1;
-}
-
-.card-title {
   font-size: 15px;
   color: #333;
-  margin-bottom: 8px;
+  line-height: 1.5;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
-.card-meta {
+.card-footer {
   display: flex;
+  justify-content: space-between;
   align-items: center;
 }
 
 .wrong-count {
   font-size: 12px;
-  color: #999;
+  color: #ff4d4f;
 }
 
 .custom-empty {

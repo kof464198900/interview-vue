@@ -1,24 +1,27 @@
 <template>
   <div class="result-page">
-    <van-nav-bar title="答题结果" left-arrow @click-left="goBack" />
+    <van-nav-bar title="答题解析" left-arrow @click-left="goBack" />
     
     <div class="result-content" v-if="result">
-      <div class="result-header" :class="{ correct: result.isCorrect, wrong: !result.isCorrect }">
-        <div class="result-icon">{{ result.isCorrect ? '✓' : '✕' }}</div>
-        <div class="result-text">{{ result.isCorrect ? '回答正确' : '回答错误' }}</div>
+      <!-- 答案对比区域 -->
+      <div class="answer-card">
+        <div class="answer-item your-answer">
+          <div class="answer-label">
+            <span class="icon">✕</span>
+            <span>你的答案</span>
+          </div>
+          <div class="answer-value wrong">{{ result.userAnswer || '未作答' }}</div>
+        </div>
+        <div class="answer-item correct-answer">
+          <div class="answer-label">
+            <span class="icon">✓</span>
+            <span>正确答案</span>
+          </div>
+          <div class="answer-value correct">{{ result.correctAnswer }}</div>
+        </div>
       </div>
       
-      <div class="answer-comparison" v-if="!result.isCorrect">
-        <div class="comparison-item">
-          <div class="label">你的答案</div>
-          <div class="value wrong">{{ result.userAnswer || '未作答' }}</div>
-        </div>
-        <div class="comparison-item">
-          <div class="label">正确答案</div>
-          <div class="value correct">{{ result.correctAnswer }}</div>
-        </div>
-      </div>
-      
+      <!-- 答案解析 -->
       <div class="explanation-section">
         <div class="section-title">答案解析</div>
         <div class="explanation-content" v-html="formatMarkdown(result.explanation)"></div>
@@ -26,18 +29,15 @@
     </div>
     
     <div class="bottom-bar">
-      <van-button v-if="nextId" type="primary" block @click="nextQuestion">
-        下一题
-      </van-button>
-      <van-button v-else type="default" block @click="goBack">
-        返回题库
-      </van-button>
+      <van-button v-if="prevId" type="default" @click="prevQuestion">上一题</van-button>
+      <van-button v-if="nextId" type="primary" @click="nextQuestion">下一题</van-button>
+      <van-button v-if="!nextId && !prevId" type="primary" block @click="goBack">返回题库</van-button>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { marked } from 'marked'
 
@@ -51,6 +51,9 @@ const result = ref({
   explanation: route.query.explanation || ''
 })
 const nextId = ref(route.query.nextId)
+const prevId = ref(route.query.prevId)
+const categoryId = ref(route.query.categoryId)
+const mode = ref(route.query.mode || '1')
 
 const formatMarkdown = (text) => {
   if (!text) return ''
@@ -63,7 +66,13 @@ const goBack = () => {
 
 const nextQuestion = () => {
   if (nextId.value) {
-    router.replace(`/answer?id=${nextId.value}&mode=1`)
+    router.replace(`/answer?id=${nextId.value}&mode=${mode.value}&categoryId=${categoryId.value}&prevId=${route.query.questionId}`)
+  }
+}
+
+const prevQuestion = () => {
+  if (prevId.value) {
+    router.replace(`/answer?id=${prevId.value}&mode=${mode.value}&categoryId=${categoryId.value}&nextId=${route.query.questionId}`)
   }
 }
 </script>
@@ -74,6 +83,7 @@ const nextQuestion = () => {
   background: #f5f5f5;
   display: flex;
   flex-direction: column;
+  padding-bottom: 70px;
 }
 
 .result-content {
@@ -81,68 +91,62 @@ const nextQuestion = () => {
   padding: 16px;
 }
 
-.result-header {
+.answer-card {
   background: #fff;
   border-radius: 12px;
-  padding: 24px;
-  text-align: center;
+  overflow: hidden;
   margin-bottom: 16px;
 }
 
-.result-header.correct {
-  background: linear-gradient(135deg, #52c41a 0%, #73d13d 100%);
-}
-
-.result-header.wrong {
-  background: linear-gradient(135deg, #ff4d4f 0%, #ff7875 100%);
-}
-
-.result-icon {
-  font-size: 48px;
-  color: #fff;
-  margin-bottom: 8px;
-}
-
-.result-text {
-  font-size: 18px;
-  font-weight: 600;
-  color: #fff;
-}
-
-.answer-comparison {
-  background: #fff;
-  border-radius: 12px;
+.answer-item {
   padding: 16px;
-  margin-bottom: 16px;
-}
-
-.comparison-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 0;
-  border-bottom: 1px solid #f5f5f5;
 }
 
-.comparison-item:last-child {
-  border-bottom: none;
+.answer-item.your-answer {
+  border-bottom: 1px dashed #f5f5f5;
 }
 
-.comparison-item .label {
-  color: #666;
+.answer-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: 14px;
+  color: #666;
 }
 
-.comparison-item .value {
+.answer-label .icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+}
+
+.your-answer .icon {
+  background: #ff4d4f;
+  color: #fff;
+}
+
+.correct-answer .icon {
+  background: #52c41a;
+  color: #fff;
+}
+
+.answer-value {
   font-size: 16px;
   font-weight: 600;
 }
 
-.comparison-item .value.wrong {
+.answer-value.wrong {
   color: #ff4d4f;
 }
 
-.comparison-item .value.correct {
+.answer-value.correct {
   color: #52c41a;
 }
 
@@ -166,8 +170,19 @@ const nextQuestion = () => {
 }
 
 .bottom-bar {
-  padding: 16px;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  gap: 12px;
+  padding: 12px 16px;
   background: #fff;
-  border-top: 1px solid #eee;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.bottom-bar .van-button {
+  flex: 1;
+  border-radius: 24px;
 }
 </style>
