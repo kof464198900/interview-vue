@@ -99,13 +99,15 @@ onMounted(async () => {
       questions.value = data.records || []
       total.value = data.total || 0
     }
-    const cardData = await getAnswerCard(categoryId.value)
-    if (cardData) {
-      answered.value = cardData.answered || 0
-      correct.value = cardData.correct || 0
-      errorCount.value = cardData.wrong || 0
-      progress.value = total.value > 0 ? Math.round(answered.value / total.value * 100) : 0
-      answerCount.value = answered.value
+    if (categoryId.value) {
+      const cardData = await getAnswerCard(categoryId.value)
+      if (cardData) {
+        answered.value = cardData.answered || 0
+        correct.value = cardData.correct || 0
+        errorCount.value = cardData.wrong || 0
+        progress.value = total.value > 0 ? Math.round(answered.value / total.value * 100) : 0
+        answerCount.value = answered.value
+      }
     }
   } catch (e) {
     console.error('获取题目列表失败', e)
