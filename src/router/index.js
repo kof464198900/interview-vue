@@ -8,10 +8,34 @@ const routes = [
     meta: { title: '首页' }
   },
   {
+    path: '/category',
+    name: 'Category',
+    component: () => import('@/views/Category.vue'),
+    meta: { title: '题库分类' }
+  },
+  {
     path: '/knowledge',
     name: 'Knowledge',
     component: () => import('@/views/Knowledge.vue'),
     meta: { title: '知识库' }
+  },
+  {
+    path: '/question-list',
+    name: 'QuestionList',
+    component: () => import('@/views/QuestionList.vue'),
+    meta: { title: '题库详情' }
+  },
+  {
+    path: '/answer',
+    name: 'Answer',
+    component: () => import('@/views/Answer.vue'),
+    meta: { title: '答题' }
+  },
+  {
+    path: '/result',
+    name: 'Result',
+    component: () => import('@/views/Result.vue'),
+    meta: { title: '答题结果' }
   },
   {
     path: '/question/:id',
@@ -36,6 +60,12 @@ const routes = [
     name: 'Error',
     component: () => import('@/views/Error.vue'),
     meta: { title: '错题本' }
+  },
+  {
+    path: '/error-detail',
+    name: 'ErrorDetail',
+    component: () => import('@/views/ErrorDetail.vue'),
+    meta: { title: '错题详情' }
   },
   {
     path: '/record',
