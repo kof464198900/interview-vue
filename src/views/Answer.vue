@@ -3,7 +3,7 @@
     <van-nav-bar 
       :title="mode === '2' ? '考试模式' : '练习模式'" 
       left-arrow 
-      @click-left="confirmExit"
+      @click-left="goBack"
     >
       <template #right>
         <van-icon 
@@ -213,11 +213,7 @@ const goToQuestion = (idx) => {
   showCard.value = false
 }
 
-const confirmExit = async () => {
-  await showConfirmDialog({
-    title: '确认退出',
-    message: '确定要退出答题吗？'
-  })
+const goBack = () => {
   router.back()
 }
 </script>
