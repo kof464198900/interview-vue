@@ -93,13 +93,22 @@ const answerCount = ref(0)
 const isCollected = ref(false)
 
 onMounted(async () => {
+  const id = route.query.id
+  categoryId.value = id ? Number(id) : null
+  categoryName.value = decodeURIComponent(route.query.name || '题库')
+  console.log('QuestionList params:', 'id=', id, 'categoryId=', categoryId.value)
+  
   try {
-    const data = await getQuestionList({ categoryId: categoryId.value, page: 1, size: 100 })
+    const params = { page: 1, size: 100 }
+    if (categoryId.value && categoryId.value > 0) {
+      params.categoryId = categoryId.value
+    }
+    const data = await getQuestionList(params)
     if (data) {
       questions.value = data.records || []
       total.value = data.total || 0
     }
-    if (categoryId.value) {
+    if (categoryId.value && categoryId.value > 0) {
       const cardData = await getAnswerCard(categoryId.value)
       if (cardData) {
         answered.value = cardData.answered || 0
