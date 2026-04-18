@@ -124,7 +124,7 @@ onMounted(async () => {
     question.value = await getQuestionDetail(questionId, 1)
     const data = await getQuestionList({ categoryId: categoryId.value, page: 1, size: 200 })
     if (data) {
-      questionList.value = data.list || []
+      questionList.value = data.records || []
       total.value = data.total || 0
       const idx = questionList.value.findIndex(q => q.id === questionId)
       if (idx !== -1) currentIndex.value = idx

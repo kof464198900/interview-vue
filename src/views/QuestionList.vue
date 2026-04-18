@@ -96,7 +96,7 @@ onMounted(async () => {
   try {
     const data = await getQuestionList({ categoryId: categoryId.value, page: 1, size: 100 })
     if (data) {
-      questions.value = data.list || []
+      questions.value = data.records || []
       total.value = data.total || 0
     }
     const cardData = await getAnswerCard(categoryId.value)
