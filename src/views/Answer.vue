@@ -8,7 +8,7 @@
     <div class="page-content" v-if="question">
       <!-- 顶部状态栏 -->
       <div class="status-bar">
-        <div class="type-tag">{{ question.type === 2 ? '判断题' : '单选题' }}</div>
+        <div class="type-tag">{{ question.type === 2 ? '多选题' : '单选题' }}</div>
         <div class="progress-info">
           <span class="progress-text">{{ currentIndex + 1 }} / {{ total }}</span>
           <div class="progress-line">
@@ -21,7 +21,7 @@
       <div class="question-area">
         <div class="question-title">{{ question.title }}</div>
         
-        <div class="options-list" v-if="question.options">
+        <div class="options-list" v-if="question.options && question.type !== 2">
           <div 
             v-for="(value, key) in parseOptions(question.options)" 
             :key="key"
@@ -34,7 +34,32 @@
           </div>
         </div>
         
+<!-- 多选题 -->
         <div class="options-list" v-else-if="question.type === 2">
+          <div 
+            v-for="(value, key) in parseOptions(question.options)" 
+            :key="key"
+            class="option-item"
+            :class="{ selected: multipleAnswers.includes(key) }"
+            @click="toggleMultipleAnswer(key)"
+          >
+            <div class="option-key">{{ key }}</div>
+            <div class="option-value">{{ value }}</div>
+          </div>
+          <div class="confirm-container">
+            <van-button 
+              type="primary" 
+              class="confirm-btn"
+              @click="confirmMultipleAnswer"
+              :disabled="multipleAnswers.length === 0"
+            >
+              确认答案 ({{ multipleAnswers.length }})
+            </van-button>
+          </div>
+        </div>
+        
+        <!-- 判断题 -->
+        <div class="options-list" v-else-if="!question.options">
           <div 
             class="option-item"
             :class="{ selected: selectedAnswer === 'true' }"
@@ -52,7 +77,7 @@
             <div class="option-value">错误</div>
           </div>
         </div>
-
+        
         <!-- 核心调整：将按钮移入答题卡片内部 -->
         <div class="question-footer">
           <div class="tool-group">
@@ -131,6 +156,7 @@ const route = useRoute()
 
 const question = ref(null)
 const selectedAnswer = ref(null)
+const multipleAnswers = ref([])
 const mode = ref(route.query.mode || '1')
 const currentIndex = ref(0)
 const total = ref(0)
@@ -192,6 +218,7 @@ const loadQuestion = async () => {
       }
     }
     selectedAnswer.value = null
+    multipleAnswers.value = []
   } catch (e) {
     console.error('获取题目失败', e)
   }
@@ -214,6 +241,71 @@ const parseOptions = (optionsStr) => {
 
 const selectAnswer = async (key) => {
   selectedAnswer.value = key
+  answers.value[question.value.id] = key
+  
+  // 保存到 store
+  answerStore.setUserAnswer(question.value.id, key, false)
+  
+  // 练习模式下选择答案后直接显示结果
+  if (mode.value === '1') {
+    try {
+      const result = await submitAnswerAPI(question.value.id, key, 1)
+      answerStatus.value[currentIndex.value] = result.isCorrect ? 1 : 2
+      
+      // 更新 store 中的结果
+      answerStore.setUserAnswer(question.value.id, key, result.isCorrect)
+      
+      if (result.isCorrect) {
+        correctCount.value++
+      } else {
+        wrongCount.value++
+      }
+      answeredCount.value++
+      
+      // 跳转到结果页
+      router.push({
+        path: '/result',
+        query: {
+          questionId: question.value.id,
+          isCorrect: result.isCorrect,
+          correctAnswer: result.correctAnswer,
+          userAnswer: result.userAnswer,
+          explanation: result.explanation,
+          categoryId: categoryId.value,
+          mode: mode.value,
+          index: currentIndex.value
+        }
+      })
+    } catch (e) {
+      console.error('提交答案失败', e)
+    }
+  }
+}
+
+const toggleMultipleAnswer = (key) => {
+  const idx = multipleAnswers.value.indexOf(key)
+  if (idx === -1) {
+    multipleAnswers.value.push(key)
+  } else {
+    multipleAnswers.value.splice(idx, 1)
+  }
+}
+
+const handleConfirm = async () => {
+  if (question.value.type === 2) {
+    await confirmMultipleAnswer()
+  } else {
+    await selectAnswer(selectedAnswer.value)
+  }
+}
+
+const confirmMultipleAnswer = async () => {
+  if (multipleAnswers.value.length === 0) {
+    showToast('请至少选择一个答案')
+    return
+  }
+  
+  const key = multipleAnswers.value.join(',')
   answers.value[question.value.id] = key
   
   // 保存到 store
@@ -370,12 +462,9 @@ const goBack = () => {
 .answer-page {
   min-height: 100vh;
   background: #FAFBFC;
-  display: flex;
-  flex-direction: column;
 }
 
 .page-content {
-  flex: 1;
   display: flex;
   flex-direction: column;
   background: #f5f5f5;
@@ -427,10 +516,8 @@ const goBack = () => {
 .question-area {
   padding: 20px 16px;
   background: #fff;
-  flex: 1;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
 }
 
 .question-title {
@@ -445,8 +532,7 @@ const goBack = () => {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  flex: 1;
-  margin-bottom: 20px;
+  padding-bottom: 16px;
 }
 
 .option-item {
@@ -493,6 +579,27 @@ const goBack = () => {
 
 .option-item.selected .option-value {
   color: #1677FF;
+}
+
+.confirm-container {
+  display: flex;
+  justify-content: center;
+  padding: 16px 0;
+}
+
+.confirm-btn {
+  width: 240px;
+  height: 48px;
+  border-radius: 24px;
+  background: #1677FF;
+  border: none;
+  font-size: 17px;
+  font-weight: 500;
+  color: #fff;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .loading {

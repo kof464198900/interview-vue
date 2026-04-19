@@ -65,35 +65,6 @@
       </div>
     </section>
     
-    <!-- Stats Section -->
-    <section class="stats-section">
-      <div class="stats-card">
-        <div class="stat-item" @click="router.push('/collect')">
-          <div class="stat-icon">★</div>
-          <div class="stat-info">
-            <span class="stat-value">{{ stats.collectCount }}</span>
-            <span class="stat-label">收藏</span>
-          </div>
-        </div>
-        <div class="stat-divider"></div>
-        <div class="stat-item" @click="router.push('/record')">
-          <div class="stat-icon">✓</div>
-          <div class="stat-info">
-            <span class="stat-value">{{ stats.answeredCount }}</span>
-            <span class="stat-label">已答</span>
-          </div>
-        </div>
-        <div class="stat-divider"></div>
-        <div class="stat-item" @click="router.push('/error')">
-          <div class="stat-icon">△</div>
-          <div class="stat-info">
-            <span class="stat-value">{{ stats.errorCount }}</span>
-            <span class="stat-label">错题</span>
-          </div>
-        </div>
-      </div>
-    </section>
-    
     <!-- Share Section -->
     <section class="share-section">
       <div class="share-card">
@@ -101,17 +72,6 @@
         <div class="share-content">
           <span class="share-title">分享给好友</span>
           <span class="share-desc">感谢您的支持</span>
-        </div>
-      </div>
-    </section>
-    
-    <!-- Resources Section -->
-    <section class="resources-section">
-      <div class="resource-card">
-        <span class="resource-icon">▼</span>
-        <div class="resource-content">
-          <span class="resource-title">2025面试题PDF版</span>
-          <span class="resource-link">获取资源 →</span>
         </div>
       </div>
     </section>
@@ -186,18 +146,6 @@ const featureItems = [
     label: '我的收藏', 
     desc: '收藏的题目',
     action: () => router.push('/collect')
-  },
-  { 
-    iconText: '📝', 
-    label: '做题记录', 
-    desc: '回顾历史答题',
-    action: () => router.push('/record')
-  },
-  { 
-    iconText: '📤', 
-    label: '小程序分享', 
-    desc: '分享给好友',
-    action: () => {}
   }
 ]
 
