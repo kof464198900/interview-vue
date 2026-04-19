@@ -63,6 +63,27 @@
   box-sizing: border-box;
 }
 
+/* 页面通用header样式 */
+.page-header {
+  display: flex;
+  align-items: center;
+  padding: 16px 20px;
+  background: #fff;
+  border-bottom: 1px solid #E8EBED;
+}
+
+.back-btn {
+  font-size: 20px;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+.page-title {
+  font-size: 20px;
+  font-weight: 600;
+  margin-left: 8px;
+}
+
 html, body {
   width: 100%;
   height: 100%;

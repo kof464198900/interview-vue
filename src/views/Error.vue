@@ -1,6 +1,6 @@
 <template>
   <div class="error-page">
-    <van-nav-bar title="错题本" left-arrow @click-left="router.back()" />
+    <van-nav-bar title="错题本" left-arrow fixed placeholder @click-left="router.back()" />
     
     <!-- 顶部分类标签 -->
     <div class="category-tags" v-if="categories.length > 0">

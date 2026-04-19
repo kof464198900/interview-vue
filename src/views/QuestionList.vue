@@ -1,72 +1,70 @@
 <template>
   <div class="question-list-page">
-    <van-nav-bar 
-      :title="categoryName" 
-      left-arrow 
-      @click-left="router.back()" 
-    >
-      <template #right>
-        <van-icon name="star" size="20" :color="isCollected ? '#ffd21e' : '#999'" @click="toggleCollect" />
-      </template>
-    </van-nav-bar>
+    <header class="page-header">
+      <span class="back-btn" @click="router.back()">←</span>
+      <h1 class="page-title">{{ categoryName }}</h1>
+    </header>
     
-    <div class="header-card">
-      <div class="stats-grid">
+    <div class="page-content">
+      <!-- 顶部标签 -->
+      <div class="tag-row">
+        <span class="category-tag">#{{ categoryName }}</span>
+        <van-icon 
+          :name="isCollected ? 'star' : 'star-o'" 
+          size="18" 
+          :color="isCollected ? '#FFD700' : '#999'"
+          @click="toggleCollect"
+        />
+      </div>
+      
+      <!-- 居中大标题 -->
+      <div class="main-title">{{ categoryName }}</div>
+      
+      <!-- 横向统计区 -->
+      <div class="stats-row">
         <div class="stat-item">
-          <span class="stat-value">{{ progress }}%</span>
-          <span class="stat-label">进度</span>
+          <span class="stat-value progress">{{ progress }}%</span>
+          <span class="stat-label">答题进度</span>
         </div>
         <div class="stat-item">
           <span class="stat-value error">{{ errorCount }}</span>
-          <span class="stat-label">错题</span>
+          <span class="stat-label">错题数</span>
         </div>
-        <div class="stat-item">
-          <span class="stat-value">{{ total }}</span>
-          <span class="stat-label">总题数</span>
-        </div>
-        <div class="stat-item">
-          <span class="stat-value">{{ difficulty }}</span>
-          <span class="stat-label">难度</span>
-        </div>
-        <div class="stat-item">
-          <span class="stat-value">{{ answerCount }}</span>
-          <span class="stat-label">答题次数</span>
-        </div>
-      </div>
-    </div>
-    
-    <div class="question-list">
-      <div 
-        v-for="(item, index) in questions" 
-        :key="item.id"
-        class="question-item"
-        @click="goAnswer(item)"
-      >
-        <div class="question-index">{{ index + 1 }}</div>
-        <div class="question-content">
-          <div class="question-title">{{ item.title }}</div>
-          <div class="question-meta">
-            <van-tag :type="item.type === 1 ? 'primary' : 'warning'" size="small">
-              {{ item.type === 1 ? '单选' : '判断' }}
-            </van-tag>
-            <span class="difficulty">
-              {{ item.difficulty === 1 ? '简单' : item.difficulty === 2 ? '中等' : '困难' }}
-            </span>
-          </div>
-        </div>
-        <van-icon name="arrow" size="16" color="#ccc" />
       </div>
       
-      <van-empty v-if="questions.length === 0" description="暂无题目" />
-    </div>
-    
-    <div class="bottom-btns">
-      <van-button type="success" class="exam-btn" block @click="startExam">
-        考试模式
-      </van-button>
-      <van-button type="primary" class="practice-btn" block @click="startPractice">
-        练习模式
-      </van-button>
+      <!-- 三行信息列表 -->
+      <div class="info-list">
+        <div class="info-item">
+          <span class="info-label">题目数量</span>
+          <span class="info-value">{{ total }}道</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">难度系统</span>
+          <span class="info-value">{{ difficulty }}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">答题次数</span>
+          <span class="info-value">{{ answerCount }}</span>
+        </div>
+      </div>
+      
+      <!-- 描述卡片 -->
+      <div class="desc-card">
+        <span class="desc-text">本专辑包含Java基础相关题目，适合入门学习者巩固基础知识</span>
+      </div>
+      
+      <!-- 按钮区域 -->
+      <div class="btn-area">
+        <van-button type="primary" class="exam-btn" @click="startExam">
+          考试模式
+        </van-button>
+        <van-button class="practice-btn" @click="startPractice">
+          练习模式
+        </van-button>
+        <van-button type="default" class="clear-btn" @click="clearRecord">
+          清空答题记录
+        </van-button>
+      </div>
     </div>
   </div>
 </template>
@@ -75,10 +73,12 @@
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { getQuestionList, getAnswerCard } from '@/api'
-import { showToast } from 'vant'
+import { useAnswerStore } from '@/store/answer'
+import { showConfirmDialog, showToast } from 'vant'
 
 const router = useRouter()
 const route = useRoute()
+const answerStore = useAnswerStore()
 
 const categoryId = ref(route.query.id || null)
 const categoryName = ref(decodeURIComponent(route.query.name || '题库'))
@@ -88,7 +88,7 @@ const answered = ref(0)
 const correct = ref(0)
 const errorCount = ref(0)
 const progress = ref(0)
-const difficulty = ref('-')
+const difficulty = ref('简单')
 const answerCount = ref(0)
 const isCollected = ref(false)
 
@@ -96,7 +96,6 @@ onMounted(async () => {
   const id = route.query.id
   categoryId.value = id ? Number(id) : null
   categoryName.value = decodeURIComponent(route.query.name || '题库')
-  console.log('QuestionList params:', 'id=', id, 'categoryId=', categoryId.value)
   
   try {
     const params = { page: 1, size: 100 }
@@ -128,6 +127,20 @@ const toggleCollect = () => {
   showToast(isCollected.value ? '已收藏' : '已取消收藏')
 }
 
+const clearRecord = async () => {
+  try {
+    await showConfirmDialog({
+      title: '清空记录',
+      message: '确定要清空所有答题记录吗？',
+    })
+    answerStore.clear()
+    answerStore.reload()
+    showToast('已清空')
+  } catch (e) {
+    // 用户取消
+  }
+}
+
 const startPractice = () => {
   if (questions.value.length > 0) {
     router.push(`/answer?id=${questions.value[0].id}&mode=1&categoryId=${categoryId.value}`)
@@ -139,29 +152,50 @@ const startExam = () => {
     router.push(`/answer?id=${questions.value[0].id}&mode=2&categoryId=${categoryId.value}`)
   }
 }
-
-const goAnswer = (item) => {
-  router.push(`/answer?id=${item.id}&mode=1&categoryId=${categoryId.value}`)
-}
 </script>
 
 <style scoped>
 .question-list-page {
   min-height: 100vh;
-  background: #f5f5f5;
-  padding-bottom: 120px;
-}
-
-.header-card {
-  background: #fff;
-  margin: 12px;
-  border-radius: 12px;
-  padding: 16px;
-}
-
-.stats-grid {
+  background: #FAFBFC;
   display: flex;
-  justify-content: space-around;
+  flex-direction: column;
+}
+
+.page-content {
+  flex: 1;
+  padding: 16px;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.tag-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  padding: 0 8px;
+}
+
+.category-tag {
+  font-size: 14px;
+  color: #999;
+}
+
+.main-title {
+  font-size: 26px;
+  font-weight: 600;
+  color: #333;
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.stats-row {
+  display: flex;
+  justify-content: center;
+  gap: 70px;
+  margin-bottom: 24px;
+  padding: 0 20px;
 }
 
 .stat-item {
@@ -171,94 +205,101 @@ const goAnswer = (item) => {
 }
 
 .stat-value {
-  font-size: 20px;
+  font-size: 32px;
   font-weight: 600;
-  color: #333;
+  color: #1677FF;
+}
+
+.stat-value.progress {
+  color: #1677FF;
 }
 
 .stat-value.error {
-  color: #ff4d4f;
+  color: #FF4D4F;
 }
 
 .stat-label {
   font-size: 12px;
   color: #999;
   margin-top: 4px;
+  text-align: center;
 }
 
-.question-list {
-  padding: 0 12px;
-}
-
-.question-item {
+.info-list {
   background: #fff;
   border-radius: 12px;
-  padding: 16px;
-  margin-bottom: 12px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  cursor: pointer;
+  padding: 18px;
+  margin-bottom: 18px;
 }
 
-.question-index {
-  width: 32px;
-  height: 32px;
+.info-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 14px 0;
+  border-bottom: 1px solid #f5f5f5;
+}
+
+.info-item:last-child {
+  border-bottom: none;
+}
+
+.info-label {
+  font-size: 15px;
+  color: #666;
+}
+
+.info-value {
+  font-size: 15px;
+  color: #333;
+  font-weight: 500;
+}
+
+.desc-card {
   background: #f5f5f5;
-  border-radius: 50%;
+  border-radius: 12px;
+  padding: 18px;
+  margin-bottom: 18px;
+}
+
+.desc-text {
+  font-size: 14px;
+  color: #999;
+  line-height: 1.6;
+}
+
+.btn-area {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0 8px;
+}
+
+.exam-btn,
+.practice-btn,
+.clear-btn {
+  height: 48px;
+  border-radius: 24px;
+  border: none;
+  font-size: 16px;
+  font-weight: 500;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
-  color: #666;
-  flex-shrink: 0;
-}
-
-.question-content {
-  flex: 1;
-}
-
-.question-title {
-  font-size: 15px;
-  color: #333;
-  margin-bottom: 8px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.question-meta {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.difficulty {
-  font-size: 12px;
-  color: #999;
-}
-
-.bottom-btns {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  display: flex;
-  gap: 12px;
-  padding: 12px;
-  background: #fff;
-  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
 }
 
 .exam-btn {
-  flex: 1;
-  border-radius: 24px;
-  background: #52c41a;
+  background: #1677FF;
+  color: #fff;
 }
 
 .practice-btn {
-  flex: 1;
-  border-radius: 24px;
-  background: #1890ff;
+  background: #36CFC9;
+  color: #fff;
+}
+
+.clear-btn {
+  margin-top: 20px;
+  background: #999;
+  color: #fff;
 }
 </style>

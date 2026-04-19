@@ -1,10 +1,12 @@
 <template>
   <div class="record-page">
-    <!-- Header -->
-    <header class="page-header">
-      <span class="back-btn" @click="router.push('/')">←</span>
-      <h1 class="page-title">做题记录</h1>
-    </header>
+    <van-nav-bar 
+      title="做题记录" 
+      left-arrow 
+      fixed 
+      placeholder
+      @click-left="router.push('/')" 
+    />
     
     <!-- 统计 -->
     <div class="record-stats">
