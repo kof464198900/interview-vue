@@ -42,7 +42,7 @@
               v-for="q in getCategoryQuestions(category.id)" 
               :key="q.id"
               class="question-item"
-              @click="goDetail(q.id)"
+              @click="goDetail(q.id, category.id)"
             >
               <span class="question-title">{{ q.title }}</span>
               <span class="question-arrow">→</span>
@@ -63,10 +63,11 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { getCategoryList, getQuestionList } from '@/api'
 
 const router = useRouter()
+const route = useRoute()
 const categoryList = ref([])
 const questionList = ref([])
 const expandedCategories = ref([])
@@ -88,7 +89,7 @@ const getCategoryQuestions = (categoryId) => {
   return questionList.value.filter(q => q.categoryId === categoryId)
 }
 
-const goDetail = (id) => router.push('/question/' + id)
+const goDetail = (id, categoryId) => router.push('/question/' + id + '?categoryId=' + categoryId)
 
 onMounted(async () => {
   try {
@@ -97,6 +98,11 @@ onMounted(async () => {
     
     const qData = await getQuestionList({ page: 1, size: 100 })
     questionList.value = qData?.records || []
+    
+    const expandId = route.query.expand
+    if (expandId) {
+      expandedCategories.value = [Number(expandId)]
+    }
   } catch (e) {
     console.error('获取数据失败', e)
   }

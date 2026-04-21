@@ -4,7 +4,7 @@
     <div class="accent-line"></div>
     
     <!-- Progress Card -->
-    <section class="progress-section">
+    <!-- <section class="progress-section">
       <div class="progress-card">
         <div class="progress-header">
           <span class="progress-title">Java面试题库</span>
@@ -18,7 +18,7 @@
           <button class="continue-btn" @click="continueAnswer">继续答题</button>
         </div>
       </div>
-    </section>
+    </section> -->
     
     <!-- Header Section -->
     <header class="hero-section">

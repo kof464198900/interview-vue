@@ -111,10 +111,12 @@ const loadQuestionList = async () => {
     let data
     if (from === 'collect') {
       data = await getCollectList(userStore.userInfo.id, 1, 500)
+      questionList.value = data?.records || []
     } else {
-      data = await getQuestionList({ page: 1, size: 500 })
+      const categoryId = route.query.categoryId
+      data = await getQuestionList({ page: 1, size: 500, categoryId })
+      questionList.value = data?.records || []
     }
-    questionList.value = data?.records || []
     const currentId = String(route.params.id)
     const idx = questionList.value.findIndex(q => String(q.id) === currentId)
     if (idx > -1) currentIndex.value = idx
@@ -154,7 +156,11 @@ const goPrevQuestion = async () => {
   const id = prevQuestionId.value
   if (id) {
     const from = route.query.from
-    await router.push('/question/' + String(id) + (from ? '?from=' + from : ''))
+    const categoryId = route.query.categoryId
+    let query = ''
+    if (from) query += 'from=' + from
+    if (categoryId) query += (query ? '&' : '') + 'categoryId=' + categoryId
+    await router.push('/question/' + String(id) + (query ? '?' + query : ''))
     loadDetail()
   } else {
     showToast('已经是第一题了')
@@ -165,7 +171,11 @@ const goNextQuestion = async () => {
   const id = nextQuestionId.value
   if (id) {
     const from = route.query.from
-    await router.push('/question/' + String(id) + (from ? '?from=' + from : ''))
+    const categoryId = route.query.categoryId
+    let query = ''
+    if (from) query += 'from=' + from
+    if (categoryId) query += (query ? '&' : '') + 'categoryId=' + categoryId
+    await router.push('/question/' + String(id) + (query ? '?' + query : ''))
     loadDetail()
   } else {
     showToast('已经是最后一题了')
@@ -173,7 +183,13 @@ const goNextQuestion = async () => {
 }
 
 const goBack = () => {
-  router.push(route.query.from === 'collect' ? '/collect' : '/knowledge')
+  if (route.query.from === 'collect') {
+    router.push('/collect')
+  } else if (route.query.categoryId) {
+    router.push('/knowledge?expand=' + route.query.categoryId)
+  } else {
+    router.push('/knowledge')
+  }
 }
 
 onMounted(() => {
