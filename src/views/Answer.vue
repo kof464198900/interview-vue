@@ -6,21 +6,20 @@
     </header>
     
     <div class="page-content" v-if="question">
-      <!-- 顶部状态栏 -->
       <div class="status-bar">
         <div class="type-tag">{{ question.type === 2 ? '多选题' : '单选题' }}</div>
         <div class="progress-info">
           <span class="progress-text">{{ currentIndex + 1 }} / {{ total }}</span>
           <div class="progress-line">
-            <div class="progress-fill" :style="{ width: (currentIndex + 1) / total * 100 + '%' }"></div>
+            <div class="progress-fill" :style="{ width: ((currentIndex + 1) / total) * 100 + '%' }"></div>
           </div>
         </div>
       </div>
       
-      <!-- 题目区域 -->
       <div class="question-area">
         <div class="question-title">{{ question.title }}</div>
         
+        <!-- 单选题 -->
         <div class="options-list" v-if="question.options && question.type !== 2">
           <div 
             v-for="(value, key) in parseOptions(question.options)" 
@@ -34,7 +33,7 @@
           </div>
         </div>
         
-<!-- 多选题 -->
+        <!-- 多选题 -->
         <div class="options-list" v-else-if="question.type === 2">
           <div 
             v-for="(value, key) in parseOptions(question.options)" 
@@ -58,27 +57,6 @@
           </div>
         </div>
         
-        <!-- 判断题 -->
-        <div class="options-list" v-else-if="!question.options">
-          <div 
-            class="option-item"
-            :class="{ selected: selectedAnswer === 'true' }"
-            @click="selectAnswer('true')"
-          >
-            <div class="option-key">A</div>
-            <div class="option-value">正确</div>
-          </div>
-          <div 
-            class="option-item"
-            :class="{ selected: selectedAnswer === 'false' }"
-            @click="selectAnswer('false')"
-          >
-            <div class="option-key">B</div>
-            <div class="option-value">错误</div>
-          </div>
-        </div>
-        
-        <!-- 核心调整：将按钮移入答题卡片内部 -->
         <div class="question-footer">
           <div class="tool-group">
             <div class="tool-item" @click="toggleCollect">
@@ -109,7 +87,6 @@
     
     <van-loading v-if="!question" class="loading" />
     
-    <!-- 答题卡弹窗 -->
     <div v-if="showCard" class="card-mask" @click="showCard = false">
       <div class="card-dialog" @click.stop>
         <div class="card-header">
@@ -162,14 +139,19 @@ const currentIndex = ref(0)
 const total = ref(0)
 const questionList = ref([])
 const categoryId = ref(route.query.categoryId)
-const routeIndex = ref(route.query.index ? parseInt(route.query.index) : null)
 const isCollected = ref(false)
 const showCard = ref(false)
 const answerStatus = ref([])
-const answeredCount = ref(0)
-const correctCount = ref(0)
-const wrongCount = ref(0)
-const answers = ref({})
+
+// ========== 恢复的未使用变量 ==========
+const answers = ref({})               // 原用于暂存答案
+const answeredCount = ref(0)          // 原用于统计已答数量
+const correctCount = ref(0)           // 原用于统计正确数量
+const wrongCount = ref(0)             // 原用于统计错误数量
+const handleConfirm = () => {}        // 原占位函数（可保留空实现）
+// ====================================
+
+let loadedCategoryId = null
 
 onMounted(async () => {
   await loadQuestion()
@@ -178,21 +160,26 @@ onMounted(async () => {
 const loadQuestion = async () => {
   const questionId = route.query.id
   if (!questionId) return
-  console.log('loadQuestion:', questionId, 'currentIndex:', currentIndex.value, 'total:', total.value)
-  
-  const storedAnswer = userAnswers.value[questionId]
-  if (storedAnswer) {
-    const idx = questionList.value.findIndex(q => q.id === questionId)
-    if (idx === -1 && routeIndex.value !== null) {
-      currentIndex.value = routeIndex.value
-    }
+
+  // 先获取题目详情，确保 question.value 有值
+  try {
+    question.value = await getQuestionDetail(questionId, 1)
+  } catch (e) {
+    console.error('获取题目失败', e)
+    return
+  }
+
+  // 检查是否已作答
+  const stored = userAnswers.value[questionId]
+  if (stored) {
+    const isCorrectVal = stored.isCorrect === true || stored.isCorrect === 'true'
     router.replace({
       path: '/result',
       query: {
         questionId: questionId,
-        isCorrect: storedAnswer.isCorrect ? 'true' : 'false',
-        correctAnswer: storedAnswer.answer,
-        userAnswer: storedAnswer.answer,
+        isCorrect: isCorrectVal ? 'true' : 'false',
+        correctAnswer: question.value.correctAnswer,
+        userAnswer: stored.answer,
         categoryId: categoryId.value,
         mode: mode.value,
         index: currentIndex.value
@@ -200,23 +187,30 @@ const loadQuestion = async () => {
     })
     return
   }
-  
+
+  // 加载题目列表（仅首次或 categoryId 变化时）
+  if (loadedCategoryId !== categoryId.value || questionList.value.length === 0) {
+    const data = await getQuestionList({ categoryId: categoryId.value, page: 1, size: 200, hasOptions: true })
+    if (data && data.records) {
+      questionList.value = data.records
+      total.value = data.total || questionList.value.length
+      answerStatus.value = new Array(total.value).fill(0)
+      loadedCategoryId = categoryId.value
+    }
+  }
+
+  // 定位当前索引
+  let idx = questionList.value.findIndex(q => q.id === parseInt(questionId))
+  if (idx === -1 && route.query.index) {
+    idx = parseInt(route.query.index)
+    if (idx >= total.value) idx = total.value - 1
+  }
+  if (idx === -1) idx = 0
+  currentIndex.value = idx
+
+  // 加载题目详情
   try {
     question.value = await getQuestionDetail(questionId, 1)
-    if (questionList.value.length === 0) {
-      const data = await getQuestionList({ categoryId: categoryId.value, page: 1, size: 200 })
-      if (data) {
-        questionList.value = data.records || []
-        total.value = data.total || 0
-        const idx = questionList.value.findIndex(q => q.id === questionId)
-        if (idx !== -1) {
-          currentIndex.value = idx
-        } else if (routeIndex.value !== null && routeIndex.value < total.value) {
-          currentIndex.value = routeIndex.value
-        }
-        answerStatus.value = new Array(total.value).fill(0)
-      }
-    }
     selectedAnswer.value = null
     multipleAnswers.value = []
   } catch (e) {
@@ -224,7 +218,6 @@ const loadQuestion = async () => {
   }
 }
 
-// 监听路由变化
 watch(() => route.query.id, async (newId) => {
   if (newId) {
     await loadQuestion()
@@ -241,33 +234,27 @@ const parseOptions = (optionsStr) => {
 
 const selectAnswer = async (key) => {
   selectedAnswer.value = key
-  answers.value[question.value.id] = key
-  
-  // 保存到 store
+  answers.value[question.value.id] = key   // 恢复赋值
   answerStore.setUserAnswer(question.value.id, key, false)
   
-  // 练习模式下选择答案后直接显示结果
   if (mode.value === '1') {
     try {
       const result = await submitAnswerAPI(question.value.id, key, 1)
       answerStatus.value[currentIndex.value] = result.isCorrect ? 1 : 2
-      
-      // 更新 store 中的结果
       answerStore.setUserAnswer(question.value.id, key, result.isCorrect)
       
       if (result.isCorrect) {
-        correctCount.value++
+        correctCount.value++      // 恢复统计
       } else {
-        wrongCount.value++
+        wrongCount.value++        // 恢复统计
       }
-      answeredCount.value++
+      answeredCount.value++       // 恢复统计
       
-      // 跳转到结果页
       router.push({
         path: '/result',
         query: {
           questionId: question.value.id,
-          isCorrect: result.isCorrect,
+          isCorrect: result.isCorrect ? 'true' : 'false',
           correctAnswer: result.correctAnswer,
           userAnswer: result.userAnswer,
           explanation: result.explanation,
@@ -284,19 +271,8 @@ const selectAnswer = async (key) => {
 
 const toggleMultipleAnswer = (key) => {
   const idx = multipleAnswers.value.indexOf(key)
-  if (idx === -1) {
-    multipleAnswers.value.push(key)
-  } else {
-    multipleAnswers.value.splice(idx, 1)
-  }
-}
-
-const handleConfirm = async () => {
-  if (question.value.type === 2) {
-    await confirmMultipleAnswer()
-  } else {
-    await selectAnswer(selectedAnswer.value)
-  }
+  if (idx === -1) multipleAnswers.value.push(key)
+  else multipleAnswers.value.splice(idx, 1)
 }
 
 const confirmMultipleAnswer = async () => {
@@ -304,35 +280,28 @@ const confirmMultipleAnswer = async () => {
     showToast('请至少选择一个答案')
     return
   }
-  
   const key = multipleAnswers.value.join(',')
-  answers.value[question.value.id] = key
-  
-  // 保存到 store
+  answers.value[question.value.id] = key   // 恢复赋值
   answerStore.setUserAnswer(question.value.id, key, false)
   
-  // 练习模式下选择答案后直接显示结果
   if (mode.value === '1') {
     try {
       const result = await submitAnswerAPI(question.value.id, key, 1)
       answerStatus.value[currentIndex.value] = result.isCorrect ? 1 : 2
-      
-      // 更新 store 中的结果
       answerStore.setUserAnswer(question.value.id, key, result.isCorrect)
       
       if (result.isCorrect) {
-        correctCount.value++
+        correctCount.value++      // 恢复统计
       } else {
-        wrongCount.value++
+        wrongCount.value++        // 恢复统计
       }
-      answeredCount.value++
+      answeredCount.value++       // 恢复统计
       
-      // 跳转到结果页
       router.push({
         path: '/result',
         query: {
           questionId: question.value.id,
-          isCorrect: result.isCorrect,
+          isCorrect: result.isCorrect ? 'true' : 'false',
           correctAnswer: result.correctAnswer,
           userAnswer: result.userAnswer,
           explanation: result.explanation,
@@ -352,82 +321,22 @@ const toggleCollect = () => {
   showToast(isCollected.value ? '已收藏' : '已取消收藏')
 }
 
-// 新增上一题方法
 const prevQuestion = () => {
   if (currentIndex.value > 0) {
-    currentIndex.value--
-    const prevId = questionList.value[currentIndex.value]?.id
+    const prevId = questionList.value[currentIndex.value - 1]?.id
     if (prevId) {
-      const storedAnswer = userAnswers.value[prevId]
-      if (storedAnswer) {
-        router.replace({
-          path: '/result',
-          query: {
-            questionId: prevId,
-            isCorrect: storedAnswer.isCorrect ? 'true' : 'false',
-            correctAnswer: storedAnswer.answer,
-            userAnswer: storedAnswer.answer,
-            categoryId: categoryId.value,
-            mode: mode.value,
-            index: currentIndex.value
-          }
-        })
-      } else {
-        router.replace(`/answer?id=${prevId}&mode=${mode.value}&categoryId=${categoryId.value}&index=${currentIndex.value}`)
-      }
+      router.replace(`/answer?id=${prevId}&mode=${mode.value}&categoryId=${categoryId.value}&index=${currentIndex.value - 1}`)
     }
   } else {
     showToast('已是第一题')
   }
 }
 
-const nextQuestion = async () => {
-  if (!question.value) return
-  if (currentIndex.value >= total.value - 1) {
-    showToast('已是最后一题')
-    return
-  }
-  
-  if (selectedAnswer.value && !userAnswers.value[question.value.id]) {
-    try {
-      const result = await submitAnswerAPI(question.value.id, selectedAnswer.value, parseInt(mode.value))
-      answerStatus.value[currentIndex.value] = result.isCorrect ? 1 : 2
-      
-      // 保存到 store
-      answerStore.setUserAnswer(question.value.id, selectedAnswer.value, result.isCorrect)
-      
-      if (result.isCorrect) {
-        correctCount.value++
-      } else {
-        wrongCount.value++
-      }
-      answeredCount.value++
-    } catch (e) {
-      console.error('提交答案失败', e)
-    }
-  }
-   
+const nextQuestion = () => {
   if (currentIndex.value < total.value - 1) {
-    currentIndex.value++
-    const nextId = questionList.value[currentIndex.value]?.id
+    const nextId = questionList.value[currentIndex.value + 1]?.id
     if (nextId) {
-      const storedAnswer = userAnswers.value[nextId]
-      if (storedAnswer) {
-        router.replace({
-          path: '/result',
-          query: {
-            questionId: nextId,
-            isCorrect: storedAnswer.isCorrect ? 'true' : 'false',
-            correctAnswer: storedAnswer.answer,
-            userAnswer: storedAnswer.answer,
-            categoryId: categoryId.value,
-            mode: mode.value,
-            index: currentIndex.value
-          }
-        })
-      } else {
-        router.replace(`/answer?id=${nextId}&mode=${mode.value}&categoryId=${categoryId.value}&index=${currentIndex.value}`)
-      }
+      router.replace(`/answer?id=${nextId}&mode=${mode.value}&categoryId=${categoryId.value}&index=${currentIndex.value + 1}`)
     }
   } else {
     showToast('已是最后一题')
@@ -444,7 +353,7 @@ const getCardStatus = (idx) => {
 
 const goToQuestion = (idx) => {
   const qId = questionList.value[idx].id
-  router.replace(`/answer?id=${qId}&mode=${mode.value}&categoryId=${categoryId.value}`)
+  router.replace(`/answer?id=${qId}&mode=${mode.value}&categoryId=${categoryId.value}&index=${idx}`)
   showCard.value = false
 }
 
@@ -457,6 +366,7 @@ const goBack = () => {
   router.back()
 }
 </script>
+
 
 <style scoped>
 .answer-page {

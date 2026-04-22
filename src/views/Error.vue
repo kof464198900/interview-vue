@@ -1,6 +1,9 @@
 <template>
   <div class="error-page">
-    <van-nav-bar title="错题本" left-arrow fixed placeholder @click-left="router.back()" />
+    <div class="page-header">
+      <span class="back-btn" @click="router.push('/')">←</span>
+      <h1 class="page-title">错题本</h1>
+    </div>
     
     <!-- 顶部分类标签 -->
     <div class="category-tags" v-if="categories.length > 0">
@@ -102,6 +105,26 @@ onMounted(() => {
   min-height: 100vh;
   background: #f5f5f5;
   padding-bottom: 60px;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  padding: 16px 20px;
+  background: #fff;
+  border-bottom: 1px solid #E8EBED;
+}
+
+.back-btn {
+  font-size: 20px;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+.page-title {
+  font-size: 17px;
+  font-weight: 600;
+  margin-left: 8px;
 }
 
 .category-tags {

@@ -98,7 +98,7 @@ onMounted(async () => {
   categoryName.value = decodeURIComponent(route.query.name || '题库')
   
   try {
-    const params = { page: 1, size: 100 }
+    const params = { page: 1, size: 100, hasOptions: true }
     if (categoryId.value && categoryId.value > 0) {
       params.categoryId = categoryId.value
     }

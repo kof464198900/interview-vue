@@ -30,8 +30,6 @@ export const useAnswerStore = defineStore('answer', () => {
   reload()
   
   const setUserAnswer = (questionId, answer, isCorrect) => {
-    if (userAnswers.value[questionId]) return
-    
     userAnswers.value[questionId] = { answer, isCorrect }
     saveToStorage(Object.assign({}, userAnswers.value))
   }

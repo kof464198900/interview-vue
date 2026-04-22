@@ -1,7 +1,7 @@
 <template>
   <div class="error-detail-page">
     <header class="page-header">
-      <span class="back-btn" @click="router.back()">←</span>
+      <span class="back-btn" @click="router.push('/error')">←</span>
       <h1 class="page-title">错题详情</h1>
     </header>
     
@@ -95,7 +95,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { getQuestionDetail, removeErrorAPI, getErrorListAPI } from '@/api'
 import { showToast, showConfirmDialog } from 'vant'
@@ -116,8 +116,8 @@ const question = ref({
 })
 
 const userAnswer = ref(route.query.wrongAnswer || '')
-const correctAnswer = route.query.correctAnswer || ''
-const isCorrect = userAnswer.value === correctAnswer
+const correctAnswer = computed(() => question.value.correctAnswer || '')
+const isCorrect = computed(() => userAnswer.value === correctAnswer.value)
 
 const explanation = ref('')
 
@@ -146,6 +146,7 @@ const loadExplanation = async () => {
       question.value.title = detail.title || question.value.title
       question.value.options = detail.options || null
       question.value.type = detail.type || 1
+      question.value.correctAnswer = detail.correctAnswer || ''
       if (detail.answerKey) {
         explanation.value = marked(detail.answerKey)
       } else if (detail.expandKnowledge) {
@@ -160,6 +161,13 @@ const loadExplanation = async () => {
 onMounted(() => {
   loadErrorList()
   loadExplanation()
+})
+
+// 监听路由变化，切换题目时重新加载
+watch(() => route.query.questionId, (newId) => {
+  if (newId) {
+    loadExplanation()
+  }
 })
 
 const handleRemove = async () => {
@@ -181,11 +189,12 @@ const goPrev = () => {
     return
   }
   
-  let idx = errorList.value.findIndex(q => q.questionId === route.query.questionId)
+  const currentId = parseInt(route.query.questionId)
+  let idx = errorList.value.findIndex(q => q.questionId === currentId)
   if (idx === -1) idx = 0
   if (idx > 0) {
     const prev = errorList.value[idx - 1]
-    router.push(`/error-detail?questionId=${prev.questionId}&title=${prev.title || ''}&wrongAnswer=${prev.wrongAnswer || ''}&correctAnswer=${prev.correctAnswer || ''}`)
+    router.push(`/error-detail?questionId=${prev.questionId}&title=${encodeURIComponent(prev.title || '')}&wrongAnswer=${encodeURIComponent(prev.wrongAnswer || '')}&correctAnswer=${encodeURIComponent(prev.correctAnswer || '')}`)
   } else {
     showToast('已是第一题')
   }
@@ -197,11 +206,12 @@ const goNext = () => {
     return
   }
   
-  let idx = errorList.value.findIndex(q => q.questionId === route.query.questionId)
+  const currentId = parseInt(route.query.questionId)
+  let idx = errorList.value.findIndex(q => q.questionId === currentId)
   if (idx === -1) idx = 0
   if (idx < errorList.value.length - 1) {
     const next = errorList.value[idx + 1]
-    router.push(`/error-detail?questionId=${next.questionId}&title=${next.title || ''}&wrongAnswer=${next.wrongAnswer || ''}&correctAnswer=${next.correctAnswer || ''}`)
+    router.push(`/error-detail?questionId=${next.questionId}&title=${encodeURIComponent(next.title || '')}&wrongAnswer=${encodeURIComponent(next.wrongAnswer || '')}&correctAnswer=${encodeURIComponent(next.correctAnswer || '')}`)
   } else {
     showToast('已到最后一题')
   }

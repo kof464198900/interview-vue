@@ -6,22 +6,19 @@
     </header>
     
     <div class="page-content" v-if="result">
-      <!-- 顶部状态栏 -->
       <div class="status-bar">
-        <div class="type-tag">{{ result.type === 2 ? '判断题' : '单选题' }}</div>
+        <div class="type-tag">{{ getTypeText(result.type) }}</div>
         <div class="progress-info">
           <span class="progress-text">{{ currentIndex + 1 }} / {{ total }}</span>
           <div class="progress-line">
-            <div class="progress-fill" :style="{ width: (currentIndex + 1) / total * 100 + '%' }"></div>
+            <div class="progress-fill" :style="{ width: ((currentIndex + 1) / total) * 100 + '%' }"></div>
           </div>
         </div>
       </div>
       
-      <!-- 题目区域 -->
       <div class="question-area">
         <div class="question-title">{{ result.title }}</div>
         
-        <!-- 选项区 -->
         <div class="options-list" v-if="result.options">
           <div 
             v-for="(value, key) in parseOptions(result.options)" 
@@ -32,7 +29,6 @@
               correct: key === result.correctAnswer, 
               wrong: key === result.userAnswer && key !== result.correctAnswer 
             }"
-            @click="selectAnswer(key)"
           >
             <div class="option-key">{{ key }}</div>
             <div class="option-value">{{ value }}</div>
@@ -41,16 +37,14 @@
           </div>
         </div>
         
-        <div class="options-list" v-else-if="result.type === 2">
+        <div class="options-list" v-else-if="result.type === 3 || !result.options">
           <div 
             class="option-item"
             :class="{ 
               selected: selectedAnswer === 'true',
               correct: 'true' === result.correctAnswer, 
-              wrong: 'true' === result.userAnswer && 'true' !== result.correctAnswer,
-              optionA: true
+              wrong: 'true' === result.userAnswer && 'true' !== result.correctAnswer
             }"
-            @click="selectAnswer('true')"
           >
             <div class="option-key">A</div>
             <div class="option-value">正确</div>
@@ -62,10 +56,8 @@
             :class="{ 
               selected: selectedAnswer === 'false',
               correct: 'false' === result.correctAnswer, 
-              wrong: 'false' === result.userAnswer && 'false' !== result.correctAnswer,
-              optionB: true
+              wrong: 'false' === result.userAnswer && 'false' !== result.correctAnswer
             }"
-            @click="selectAnswer('false')"
           >
             <div class="option-key">B</div>
             <div class="option-value">错误</div>
@@ -74,23 +66,21 @@
           </div>
         </div>
         
-        <!-- 结果对比区 -->
         <div class="answer-compare">
           <div class="compare-item" :class="{ 'is-wrong': !result.isCorrect }">
             <van-icon :name="result.isCorrect ? 'success' : 'clear'" :size="32" :color="result.isCorrect ? '#52C41A' : '#FF4D4F'" />
             <span :style="{ color: result.isCorrect ? '#52C41A' : '#FF4D4F', fontWeight: 600, fontSize: '16px' }">{{ result.isCorrect ? '正确' : '错误' }}</span>
           </div>
           <div class="compare-item">
-            <span class="answer-letter green">{{ result.correctAnswer === 'true' ? 'A' : result.correctAnswer === 'false' ? 'B' : result.correctAnswer }}</span>
+            <span class="answer-letter green">{{ formatAnswerLetter(result.correctAnswer) }}</span>
             <span>正确答案</span>
           </div>
           <div class="compare-item">
-            <span class="answer-letter blue">{{ result.userAnswer === 'true' ? 'A' : result.userAnswer === 'false' ? 'B' : result.userAnswer || '-' }}</span>
+            <span class="answer-letter blue">{{ formatAnswerLetter(result.userAnswer) || '-' }}</span>
             <span>我的答案</span>
           </div>
         </div>
         
-        <!-- 题目讲解 -->
         <div class="explanation-section">
           <div class="section-header">
             <van-icon name="certificate" size="16" color="#1677FF" />
@@ -129,7 +119,6 @@
     
     <van-loading v-if="!result" class="loading" />
     
-    <!-- 答题卡弹窗 -->
     <div v-if="showCard" class="card-mask" @click="showCard = false">
       <div class="card-dialog" @click.stop>
         <div class="card-header">
@@ -173,16 +162,17 @@ const router = useRouter()
 const route = useRoute()
 
 const result = ref(null)
-let selectedAnswer = ref(null)
+const selectedAnswer = ref(null)
 const currentIndex = ref(0)
 const total = ref(0)
 const questionList = ref([])
 const categoryId = ref(route.query.categoryId)
 const mode = ref(route.query.mode || '1')
-const routeIndex = ref(route.query.index ? parseInt(route.query.index) : null)
 const isCollected = ref(false)
 const showCard = ref(false)
 const answerStatus = ref([])
+
+let loadedCategoryId = null
 
 onMounted(async () => {
   await loadQuestion()
@@ -191,46 +181,70 @@ onMounted(async () => {
 const loadQuestion = async () => {
   const questionId = route.query.questionId
   if (!questionId) return
-  
-  try {
-    // 先获取题目列表
-    const data = await getQuestionList({ categoryId: categoryId.value, page: 1, size: 200 })
-    if (data) {
-      questionList.value = data.records || []
-      total.value = data.total || 0
-      const idx = questionList.value.findIndex(q => q.id === questionId)
-      if (idx !== -1) {
-        currentIndex.value = idx
-      } else if (routeIndex.value !== null && routeIndex.value < total.value) {
-        currentIndex.value = routeIndex.value
-      }
+
+  // 加载题目列表（仅首次或 categoryId 变化时）
+  if (loadedCategoryId !== categoryId.value || questionList.value.length === 0) {
+    const data = await getQuestionList({ categoryId: categoryId.value, page: 1, size: 200, hasOptions: true })
+    if (data && data.records) {
+      questionList.value = data.records
+      total.value = data.total || questionList.value.length
       answerStatus.value = new Array(total.value).fill(0)
-      answerStatus.value[currentIndex.value] = route.query.isCorrect === 'true' ? 1 : 2
+      loadedCategoryId = categoryId.value
+    } else {
+      console.error('获取题目列表失败')
+      return
     }
-    
-    // 调用API获取完整题目详情
-    const detail = await getQuestionDetail(questionId, 1)
-    result.value = {
-      title: detail.title,
-      type: detail.type,
-      options: detail.options,
-      correctAnswer: route.query.correctAnswer || detail.correctAnswer,
-      userAnswer: route.query.userAnswer || '',
-      explanation: detail.answerKey || '',
-      isCorrect: route.query.isCorrect === 'true'
-    }
-    selectedAnswer.value = route.query.userAnswer || null
-  } catch (e) {
-    console.error('获取题目失败', e)
   }
+
+  // 查找当前题目索引
+  let idx = questionList.value.findIndex(q => q.id === parseInt(questionId))
+  if (idx === -1 && route.query.index) {
+    idx = parseInt(route.query.index)
+    if (idx >= total.value) idx = total.value - 1
+  }
+  if (idx === -1) idx = 0
+  currentIndex.value = idx
+
+  // 获取题目详情（唯一的一次请求）
+  let detail
+  try {
+    detail = await getQuestionDetail(questionId, 1)
+  } catch (e) {
+    console.error('获取题目详情失败', e)
+    return
+  }
+
+  const stored = userAnswers.value[questionId] || {}
+  const isCorrectParam = route.query.isCorrect
+  const isCorrect = isCorrectParam === 'true'
+  const userAnswer = route.query.userAnswer || ''
+  const correctAnswer = route.query.correctAnswer || detail.correctAnswer || ''
+
+  result.value = {
+    title: detail.title,
+    type: detail.type,
+    options: detail.options,
+    correctAnswer: correctAnswer,
+    userAnswer: userAnswer,
+    explanation: detail.answerKey || '',
+    isCorrect: isCorrect
+  }
+  selectedAnswer.value = userAnswer
+  answerStatus.value[idx] = isCorrect ? 1 : 2
 }
 
-// 监听路由变化
+// 监听路由变化，重新加载数据（仅一次请求）
 watch(() => route.query.questionId, async (newId) => {
   if (newId) {
     await loadQuestion()
   }
 })
+
+const getTypeText = (type) => {
+  if (type === 2) return '多选题'
+  if (type === 1) return '单选题'
+  return '判断题'
+}
 
 const parseOptions = (optionsStr) => {
   try {
@@ -245,8 +259,10 @@ const formatMarkdown = (text) => {
   return marked(text)
 }
 
-const selectAnswer = (key) => {
-  selectedAnswer.value = key
+const formatAnswerLetter = (answer) => {
+  if (answer === 'true') return 'A'
+  if (answer === 'false') return 'B'
+  return answer
 }
 
 const toggleCollect = () => {
@@ -262,53 +278,65 @@ const getCardStatus = (idx) => {
   return 'gray'
 }
 
-const goToQuestion = (idx) => {
-  const qId = questionList.value[idx].id
-  const storedAnswer = userAnswers.value[qId]
-  if (storedAnswer) {
-    router.replace(`/result?questionId=${qId}&categoryId=${categoryId.value}&mode=${mode.value}&index=${idx}`)
-  } else {
-    router.replace(`/answer?id=${qId}&mode=${mode.value}&categoryId=${categoryId.value}&index=${idx}`)
+// 切换题目：只更新路由，让 watch 触发 loadQuestion 获取数据
+const switchToQuestion = (newIndex) => {
+  if (newIndex < 0 || newIndex >= total.value) return
+  const targetId = questionList.value[newIndex].id
+  const stored = userAnswers.value[targetId]
+
+  if (!stored) {
+    router.replace(`/answer?id=${targetId}&mode=${mode.value}&categoryId=${categoryId.value}&index=${newIndex}`)
+    return
   }
-  showCard.value = false
+
+  // 传递基本信息，让 loadQuestion 从后端获取正确答案
+  const isCorrectVal = stored.isCorrect === true || stored.isCorrect === 'true'
+  router.replace({
+    path: '/result',
+    query: {
+      questionId: targetId,
+      isCorrect: isCorrectVal ? 'true' : 'false',
+      userAnswer: stored.answer,
+      categoryId: categoryId.value,
+      mode: mode.value,
+      index: newIndex
+    }
+  })
 }
 
 const nextQuestion = () => {
   if (currentIndex.value < total.value - 1) {
-    currentIndex.value++
-    const nextId = questionList.value[currentIndex.value].id
-    const storedAnswer = userAnswers.value[nextId]
-    
-    if (storedAnswer) {
-      router.replace(`/result?questionId=${nextId}&categoryId=${categoryId.value}&mode=${mode.value}&index=${currentIndex.value}`)
-    } else {
-      router.replace(`/answer?id=${nextId}&mode=${mode.value}&categoryId=${categoryId.value}&index=${currentIndex.value}`)
-    }
+    switchToQuestion(currentIndex.value + 1)
   } else {
-    router.push('/category')
+    showToast('已是最后一题')
   }
 }
 
 const prevQuestion = () => {
   if (currentIndex.value > 0) {
-    currentIndex.value--
-    const prevId = questionList.value[currentIndex.value].id
-    const storedAnswer = userAnswers.value[prevId]
-    
-    if (storedAnswer) {
-      router.replace(`/result?questionId=${prevId}&categoryId=${categoryId.value}&mode=${mode.value}&index=${currentIndex.value}`)
-    } else {
-      router.replace(`/answer?id=${prevId}&mode=${mode.value}&categoryId=${categoryId.value}&index=${currentIndex.value}`)
-    }
+    switchToQuestion(currentIndex.value - 1)
   } else {
     showToast('已是第一题')
   }
+}
+
+const goToQuestion = (idx) => {
+  const targetId = questionList.value[idx].id
+  const stored = userAnswers.value[targetId]
+  if (stored) {
+    router.replace(`/result?questionId=${targetId}&categoryId=${categoryId.value}&mode=${mode.value}&index=${idx}`)
+  } else {
+    router.replace(`/answer?id=${targetId}&mode=${mode.value}&categoryId=${categoryId.value}&index=${idx}`)
+  }
+  showCard.value = false
 }
 
 const goBack = () => {
   router.push('/category')
 }
 </script>
+
+
 
 <style scoped>
 .answer-page {

@@ -36,6 +36,7 @@
       >
         <div class="category-info">
           <span class="category-name">{{ item.name }}</span>
+          <span v-if="item.questionCount" class="category-count">{{ item.questionCount }}题</span>
           <span v-if="item.vip" class="vip-tag">VIP</span>
         </div>
         <van-icon name="arrow" size="16" color="#ccc" />
@@ -176,6 +177,14 @@ const goQuestionList = (item) => {
   font-size: 16px;
   font-weight: 600;
   color: #333;
+}
+
+.category-count {
+  font-size: 12px;
+  color: #A0AEC0;
+  background: #F7FAFC;
+  padding: 4px 10px;
+  border-radius: 999px;
 }
 
 .vip-tag {
