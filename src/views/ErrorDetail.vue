@@ -170,6 +170,13 @@ watch(() => route.query.questionId, (newId) => {
   }
 })
 
+// 同时监听 wrongAnswer 变化
+watch(() => route.query.wrongAnswer, (newVal) => {
+  if (newVal) {
+    userAnswer.value = newVal
+  }
+})
+
 const handleRemove = async () => {
   try {
     await showConfirmDialog({ title: '移除错题', message: '确定要移除这道错题吗？' })
