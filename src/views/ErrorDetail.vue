@@ -10,67 +10,65 @@
       <div class="question-card">
         <div class="question-title">{{ question.title }}</div>
         
-        <!-- 选项区 -->
-        <div class="options-list" v-if="question.options">
+        <!-- 单选题（type=1） -->
+        <div class="options-list" v-if="question.type === 1 && question.options">
           <div 
             v-for="(value, key) in parseOptions(question.options)" 
             :key="key"
             class="option-item"
             :class="{ 
-              selected: userAnswer === key,
-              correct: key === correctAnswer, 
-              wrong: key === userAnswer && key !== correctAnswer 
+              selected: userAnswerRaw === key,
+              correct: key === correctAnswerRaw, 
+              wrong: key === userAnswerRaw && key !== correctAnswerRaw 
             }"
           >
             <div class="option-key">{{ key }}</div>
             <div class="option-value">{{ value }}</div>
-            <van-icon v-if="key === correctAnswer" name="success" size="18" color="#52C41A" class="result-icon" />
-            <van-icon v-if="key === userAnswer && key !== correctAnswer" name="clear" size="18" color="#FF4D4F" class="result-icon" />
+            <van-icon v-if="key === correctAnswerRaw" name="success" size="18" color="#52C41A" class="result-icon" />
+            <van-icon v-if="key === userAnswerRaw && key !== correctAnswerRaw" name="clear" size="18" color="#FF4D4F" class="result-icon" />
           </div>
         </div>
         
-        <div class="options-list" v-else-if="question.type === 2">
+        <!-- 多选题（type=2） -->
+        <div class="options-list" v-else-if="question.type === 2 && question.options">
           <div 
+            v-for="(value, key) in parseOptions(question.options)" 
+            :key="key"
             class="option-item"
             :class="{ 
-              correct: 'true' === correctAnswer, 
-              wrong: 'true' === userAnswer && 'true' !== correctAnswer,
-              optionA: true
+              'option-multiple': true,
+              selected: userAnswerArray.includes(key),
+              correct: correctAnswerArray.includes(key), 
+              wrong: userAnswerArray.includes(key) && !correctAnswerArray.includes(key)
             }"
           >
-            <div class="option-key">A</div>
-            <div class="option-value">正确</div>
-            <van-icon v-if="'true' === correctAnswer" name="success" size="20" color="#52C41A" class="result-icon" />
-            <van-icon v-if="'true' === userAnswer && 'true' !== correctAnswer" name="clear" size="20" color="#FF4D4F" class="result-icon" />
-          </div>
-          <div 
-            class="option-item"
-            :class="{ 
-              correct: 'false' === correctAnswer, 
-              wrong: 'false' === userAnswer && 'false' !== correctAnswer,
-              optionB: true
-            }"
-          >
-            <div class="option-key">B</div>
-            <div class="option-value">错误</div>
-            <van-icon v-if="'false' === correctAnswer" name="success" size="20" color="#52C41A" class="result-icon" />
-            <van-icon v-if="'false' === userAnswer && 'false' !== correctAnswer" name="clear" size="20" color="#FF4D4F" class="result-icon" />
+            <div class="option-key checkbox-style">{{ key }}</div>
+            <div class="option-value">{{ value }}</div>
+            <van-icon v-if="correctAnswerArray.includes(key)" name="success" size="18" color="#52C41A" class="result-icon" />
+            <van-icon v-if="userAnswerArray.includes(key) && !correctAnswerArray.includes(key)" name="clear" size="18" color="#FF4D4F" class="result-icon" />
           </div>
         </div>
+        
+        <!-- 判断题（type=3）暂时注释掉，需要时可取消注释 -->
+        <!--
+        <div class="options-list" v-else-if="question.type === 3">
+          ... 判断题模板 ...
+        </div>
+        -->
       </div>
       
       <!-- 结果对比区 -->
       <div class="answer-compare">
-        <div class="compare-item" :class="{ 'is-wrong': !isCorrect }">
-          <van-icon :name="isCorrect ? 'success' : 'clear'" :size="32" :color="isCorrect ? '#52C41A' : '#FF4D4F'" />
-          <span :style="{ color: isCorrect ? '#52C41A' : '#FF4D4F', fontWeight: 600, fontSize: '16px' }">{{ isCorrect ? '正确' : '错误' }}</span>
+        <div class="compare-item" :class="{ 'is-wrong': !isOverallCorrect }">
+          <van-icon :name="isOverallCorrect ? 'success' : 'clear'" :size="32" :color="isOverallCorrect ? '#52C41A' : '#FF4D4F'" />
+          <span :style="{ color: isOverallCorrect ? '#52C41A' : '#FF4D4F', fontWeight: 600, fontSize: '16px' }">{{ isOverallCorrect ? '正确' : '错误' }}</span>
         </div>
         <div class="compare-item">
-          <span class="answer-letter green">{{ correctAnswer === 'true' ? 'A' : correctAnswer === 'false' ? 'B' : correctAnswer }}</span>
+          <span class="answer-letter green">{{ formattedCorrectAnswer }}</span>
           <span>正确答案</span>
         </div>
         <div class="compare-item">
-          <span class="answer-letter blue">{{ userAnswer === 'true' ? 'A' : userAnswer === 'false' ? 'B' : userAnswer || '-' }}</span>
+          <span class="answer-letter blue">{{ formattedUserAnswer }}</span>
           <span>我的答案</span>
         </div>
       </div>
@@ -115,9 +113,53 @@ const question = ref({
   correctAnswer: route.query.correctAnswer || ''
 })
 
-const userAnswer = ref(route.query.wrongAnswer || '')
-const correctAnswer = computed(() => question.value.correctAnswer || '')
-const isCorrect = computed(() => userAnswer.value === correctAnswer.value)
+const userAnswerRaw = ref(route.query.wrongAnswer || '')
+const correctAnswerRaw = computed(() => question.value.correctAnswer || '')
+
+// 辅助函数：将逗号分隔的字符串转为数组（用于多选）
+const parseAnswerToArray = (answerStr) => {
+  if (!answerStr) return []
+  return answerStr.split(',').map(s => s.trim()).filter(s => s)
+}
+
+// 判断题型
+const isMultiple = computed(() => question.value.type === 2)
+// const isJudgment = computed(() => question.value.type === 3)  // 判断题暂时不用
+
+// 多选题专用数组
+const userAnswerArray = computed(() => isMultiple.value ? parseAnswerToArray(userAnswerRaw.value) : [])
+const correctAnswerArray = computed(() => isMultiple.value ? parseAnswerToArray(correctAnswerRaw.value) : [])
+
+// 整体是否正确（单选：字符串相等；多选：数组内容相等（顺序无关））
+const isOverallCorrect = computed(() => {
+  if (isMultiple.value) {
+    const userSorted = [...userAnswerArray.value].sort()
+    const correctSorted = [...correctAnswerArray.value].sort()
+    return userSorted.length === correctSorted.length && userSorted.every((v, i) => v === correctSorted[i])
+  } else {
+    // 单选题
+    return userAnswerRaw.value === correctAnswerRaw.value
+  }
+})
+
+// 格式化的答案显示（用于对比区）
+const formattedCorrectAnswer = computed(() => {
+  if (isMultiple.value) {
+    return correctAnswerArray.value.join(',') || '-'
+  } else {
+    // 单选题
+    return correctAnswerRaw.value || '-'
+  }
+})
+
+const formattedUserAnswer = computed(() => {
+  if (isMultiple.value) {
+    return userAnswerArray.value.join(',') || '-'
+  } else {
+    // 单选题
+    return userAnswerRaw.value || '-'
+  }
+})
 
 const explanation = ref('')
 
@@ -166,14 +208,19 @@ onMounted(() => {
 // 监听路由变化，切换题目时重新加载
 watch(() => route.query.questionId, (newId) => {
   if (newId) {
+    // 更新题目基本信息
+    question.value.title = route.query.title || ''
+    question.value.options = route.query.options || null
+    question.value.type = parseInt(route.query.type) || 1
+    question.value.correctAnswer = route.query.correctAnswer || ''
+    userAnswerRaw.value = route.query.wrongAnswer || ''
     loadExplanation()
   }
 })
 
-// 同时监听 wrongAnswer 变化
 watch(() => route.query.wrongAnswer, (newVal) => {
-  if (newVal) {
-    userAnswer.value = newVal
+  if (newVal !== undefined) {
+    userAnswerRaw.value = newVal || ''
   }
 })
 
@@ -201,7 +248,7 @@ const goPrev = () => {
   if (idx === -1) idx = 0
   if (idx > 0) {
     const prev = errorList.value[idx - 1]
-    router.push(`/error-detail?questionId=${prev.questionId}&title=${encodeURIComponent(prev.title || '')}&wrongAnswer=${encodeURIComponent(prev.wrongAnswer || '')}&correctAnswer=${encodeURIComponent(prev.correctAnswer || '')}`)
+    router.push(`/error-detail?questionId=${prev.questionId}&title=${encodeURIComponent(prev.title || '')}&wrongAnswer=${encodeURIComponent(prev.wrongAnswer || '')}&correctAnswer=${encodeURIComponent(prev.correctAnswer || '')}&type=${prev.type || 1}&options=${encodeURIComponent(prev.options || '')}`)
   } else {
     showToast('已是第一题')
   }
@@ -218,7 +265,7 @@ const goNext = () => {
   if (idx === -1) idx = 0
   if (idx < errorList.value.length - 1) {
     const next = errorList.value[idx + 1]
-    router.push(`/error-detail?questionId=${next.questionId}&title=${encodeURIComponent(next.title || '')}&wrongAnswer=${encodeURIComponent(next.wrongAnswer || '')}&correctAnswer=${encodeURIComponent(next.correctAnswer || '')}`)
+    router.push(`/error-detail?questionId=${next.questionId}&title=${encodeURIComponent(next.title || '')}&wrongAnswer=${encodeURIComponent(next.wrongAnswer || '')}&correctAnswer=${encodeURIComponent(next.correctAnswer || '')}&type=${next.type || 1}&options=${encodeURIComponent(next.options || '')}`)
   } else {
     showToast('已到最后一题')
   }
@@ -226,6 +273,7 @@ const goNext = () => {
 </script>
 
 <style scoped>
+/* 样式保持不变，仅保留单选和多选所需 */
 .error-detail-page {
   min-height: 100vh;
   background: #f5f5f5;
@@ -299,6 +347,11 @@ const goNext = () => {
   flex-shrink: 0;
 }
 
+/* 多选题的选项样式（方形） */
+.option-item .option-key.checkbox-style {
+  border-radius: 4px;
+}
+
 .option-item.selected .option-key {
   background: #1677FF;
   color: #fff;
@@ -357,6 +410,16 @@ const goNext = () => {
   font-weight: 600;
 }
 
+/* 多选题答案显示可能不止一个字母，需要宽度自适应 */
+.answer-letter.green,
+.answer-letter.blue {
+  width: auto;
+  min-width: 32px;
+  padding: 0 8px;
+  border-radius: 16px;
+  font-size: 12px;
+}
+
 .answer-letter.green {
   background: #52C41A;
   color: #fff;
@@ -385,84 +448,6 @@ const goNext = () => {
   font-size: 15px;
   font-weight: 600;
   color: #1677FF;
-}
-
-.explanation-content {
-  font-size: 14px;
-  color: #666;
-  line-height: 1.8;
-}
-
-.question-footer {
-  background: #fff;
-  border-radius: 12px;
-  overflow: hidden;
-  margin-bottom: 12px;
-}
-
-.answer-item {
-  padding: 16px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.answer-item.wrong {
-  border-bottom: 1px dashed #f5f5f5;
-}
-
-.answer-label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  color: #666;
-}
-
-.answer-label .icon {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-}
-
-.answer-item.wrong .icon {
-  background: #ff4d4f;
-  color: #fff;
-}
-
-.answer-item.correct .icon {
-  background: #52c41a;
-  color: #fff;
-}
-
-.answer-value {
-  font-size: 16px;
-  font-weight: 600;
-}
-
-.answer-item.wrong .answer-value {
-  color: #ff4d4f;
-}
-
-.answer-item.correct .answer-value {
-  color: #52c41a;
-}
-
-.explanation-card {
-  background: #fff;
-  border-radius: 12px;
-  padding: 16px;
-}
-
-.section-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: #333;
-  margin-bottom: 12px;
 }
 
 .explanation-content {
@@ -523,17 +508,6 @@ const goNext = () => {
   flex: 1;
   border-radius: 24px;
   background: #ff4d4f;
-  color: #fff;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.next-btn {
-  flex: 1;
-  border-radius: 24px;
-  background: #1677FF;
   color: #fff;
   height: 40px;
   display: flex;

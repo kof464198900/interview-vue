@@ -19,7 +19,7 @@
       <div class="question-area">
         <div class="question-title">{{ result.title }}</div>
         
-        <div class="options-list" v-if="result.options">
+        <div class="options-list" v-if="result.type === 1 && result.options">
           <div 
             v-for="(value, key) in parseOptions(result.options)" 
             :key="key"
@@ -34,6 +34,26 @@
             <div class="option-value">{{ value }}</div>
             <van-icon v-if="key === result.correctAnswer" name="success" size="18" color="#52C41A" class="result-icon" />
             <van-icon v-if="key === result.userAnswer && key !== result.correctAnswer" name="clear" size="18" color="#FF4D4F" class="result-icon" />
+          </div>
+        </div>
+        
+        <!-- 多选题 -->
+        <div class="options-list" v-else-if="result.type === 2 && result.options">
+          <div 
+            v-for="(value, key) in parseOptions(result.options)" 
+            :key="key"
+            class="option-item"
+            :class="{ 
+              'option-multiple': true,
+              selected: userAnswerArray.includes(key),
+              correct: correctAnswerArray.includes(key), 
+              wrong: userAnswerArray.includes(key) && !correctAnswerArray.includes(key)
+            }"
+          >
+            <div class="option-key checkbox-style">{{ key }}</div>
+            <div class="option-value">{{ value }}</div>
+            <van-icon v-if="correctAnswerArray.includes(key)" name="success" size="18" color="#52C41A" class="result-icon" />
+            <van-icon v-if="userAnswerArray.includes(key) && !correctAnswerArray.includes(key)" name="clear" size="18" color="#FF4D4F" class="result-icon" />
           </div>
         </div>
         
@@ -72,11 +92,11 @@
             <span :style="{ color: result.isCorrect ? '#52C41A' : '#FF4D4F', fontWeight: 600, fontSize: '16px' }">{{ result.isCorrect ? '正确' : '错误' }}</span>
           </div>
           <div class="compare-item">
-            <span class="answer-letter green">{{ formatAnswerLetter(result.correctAnswer) }}</span>
+            <span class="answer-letter green">{{ formattedCorrectAnswer }}</span>
             <span>正确答案</span>
           </div>
           <div class="compare-item">
-            <span class="answer-letter blue">{{ formatAnswerLetter(result.userAnswer) || '-' }}</span>
+            <span class="answer-letter blue">{{ formattedUserAnswer }}</span>
             <span>我的答案</span>
           </div>
         </div>
@@ -147,7 +167,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, watch, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { getQuestionDetail, getQuestionList } from '@/api'
 import { marked } from 'marked'
@@ -246,6 +266,21 @@ const getTypeText = (type) => {
   return '判断题'
 }
 
+// 多选题专用数组
+const userAnswerArray = computed(() => {
+  if (result.value?.type === 2) {
+    return (result.value.userAnswer || '').split(',').map(s => s.trim()).filter(s => s)
+  }
+  return []
+})
+
+const correctAnswerArray = computed(() => {
+  if (result.value?.type === 2) {
+    return (result.value.correctAnswer || '').split(',').map(s => s.trim()).filter(s => s)
+  }
+  return []
+})
+
 const parseOptions = (optionsStr) => {
   try {
     return JSON.parse(optionsStr)
@@ -264,6 +299,20 @@ const formatAnswerLetter = (answer) => {
   if (answer === 'false') return 'B'
   return answer
 }
+
+const formattedCorrectAnswer = computed(() => {
+  if (result.value?.type === 2) {
+    return correctAnswerArray.value.join(',') || '-'
+  }
+  return formatAnswerLetter(result.value?.correctAnswer) || '-'
+})
+
+const formattedUserAnswer = computed(() => {
+  if (result.value?.type === 2) {
+    return userAnswerArray.value.join(',') || '-'
+  }
+  return formatAnswerLetter(result.value?.userAnswer) || '-'
+})
 
 const toggleCollect = () => {
   isCollected.value = !isCollected.value
@@ -460,6 +509,10 @@ const goBack = () => {
   flex-shrink: 0;
 }
 
+.option-item .option-key.checkbox-style {
+  border-radius: 4px;
+}
+
 .option-item.optionA {
   border: 2px solid #FF4D4F;
 }
@@ -554,6 +607,15 @@ const goBack = () => {
   justify-content: center;
   font-size: 18px;
   font-weight: 600;
+}
+
+.answer-letter.green,
+.answer-letter.blue {
+  width: auto;
+  min-width: 40px;
+  padding: 0 12px;
+  border-radius: 20px;
+  font-size: 16px;
 }
 
 .answer-letter.green {
