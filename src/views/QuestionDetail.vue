@@ -15,6 +15,7 @@
     <div class="page-body">
       <div class="question-info">
         <div class="question-title-wrap">
+          <span v-if="route.query.index" class="question-index">{{ route.query.index }}、</span>
           <span class="question-title">{{ questionData.title || '暂无题目' }}</span>
         </div>
         
@@ -157,9 +158,11 @@ const goPrevQuestion = async () => {
   if (id) {
     const from = route.query.from
     const categoryId = route.query.categoryId
+    const currentIndex = Number(route.query.index) || 0
     let query = ''
     if (from) query += 'from=' + from
     if (categoryId) query += (query ? '&' : '') + 'categoryId=' + categoryId
+    if (currentIndex > 1) query += (query ? '&' : '') + 'index=' + (currentIndex - 1)
     await router.push('/question/' + String(id) + (query ? '?' + query : ''))
     loadDetail()
   } else {
@@ -172,9 +175,11 @@ const goNextQuestion = async () => {
   if (id) {
     const from = route.query.from
     const categoryId = route.query.categoryId
+    const currentIndex = Number(route.query.index) || 0
     let query = ''
     if (from) query += 'from=' + from
     if (categoryId) query += (query ? '&' : '') + 'categoryId=' + categoryId
+    if (currentIndex > 0) query += (query ? '&' : '') + 'index=' + (currentIndex + 1)
     await router.push('/question/' + String(id) + (query ? '?' + query : ''))
     loadDetail()
   } else {
@@ -334,10 +339,21 @@ watch(() => route.params.id, () => {
 
 .question-title-wrap {
   margin-bottom: 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.question-index {
+  font-size: 17px;
+  font-weight: 600;
+  color: #333;
+  flex-shrink: 0;
+  margin-right: 0;
 }
 
 .question-title {
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 600;
   line-height: 1.6;
 }

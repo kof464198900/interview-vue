@@ -24,26 +24,27 @@
         class="category-item"
         :class="{ expanded: expandedCategories.includes(category.id) }"
       >
-        <div 
+<div 
           class="category-header"
           @click="toggleCategory(category.id)"
         >
           <div class="category-info">
-            <span class="category-index">{{ index + 1 }}</span>
+            <van-icon name="label-o" size="18" color="#1677FF" />
             <span class="category-name">{{ category.name }}</span>
             <span class="category-count">{{ getCategoryQuestionCount(category.id) }}题</span>
           </div>
-          <span class="category-arrow">→</span>
+          <van-icon name="arrow-down" class="category-arrow" :class="{ rotated: expandedCategories.includes(category.id) }" />
         </div>
         
         <transition name="expand">
           <div v-if="expandedCategories.includes(category.id)" class="category-questions">
             <div 
-              v-for="q in getCategoryQuestions(category.id)" 
+              v-for="(q, idx) in getCategoryQuestions(category.id)" 
               :key="q.id"
               class="question-item"
-              @click="goDetail(q.id, category.id)"
+              @click="goDetail(q.id, category.id, idx + 1)"
             >
+              <span class="question-index">{{ idx + 1 }}</span>
               <span class="question-title">{{ q.title }}</span>
               <span class="question-arrow">→</span>
             </div>
@@ -89,14 +90,14 @@ const getCategoryQuestions = (categoryId) => {
   return questionList.value.filter(q => q.categoryId === categoryId)
 }
 
-const goDetail = (id, categoryId) => router.push('/question/' + id + '?categoryId=' + categoryId)
+const goDetail = (id, categoryId, index) => router.push('/question/' + id + '?categoryId=' + categoryId + '&index=' + index)
 
 onMounted(async () => {
   try {
     const catData = await getCategoryList()
     categoryList.value = catData || []
     
-    const qData = await getQuestionList({ page: 1, size: 100 })
+    const qData = await getQuestionList({ page: 1, size: 100, hasOptions: false })
     questionList.value = qData?.records || []
     
     const expandId = route.query.expand
@@ -206,25 +207,13 @@ onMounted(async () => {
 .category-info {
   display: flex;
   align-items: center;
-  gap: 12px;
-}
-
-.category-index {
-  width: 28px;
-  height: 28px;
-  background: #1677FF;
-  color: #fff;
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 13px;
-  font-weight: 600;
+  gap: 8px;
 }
 
 .category-name {
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 600;
+  color: #1a1a1a;
 }
 
 .category-count {
@@ -236,15 +225,17 @@ onMounted(async () => {
 }
 
 .category-arrow {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: #F7FAFC;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #A0AEC0;
-  font-size: 12px;
+  color: #1677FF;
+  font-size: 14px;
+  transition: transform 0.3s;
+}
+
+.category-arrow.rotated {
+  transform: rotate(180deg);
+}
+
+.category-info .van-icon {
+  flex-shrink: 0;
 }
 
 .category-item.expanded .category-arrow {
@@ -275,9 +266,19 @@ onMounted(async () => {
   background: #fff;
 }
 
+.question-index {
+  width: 24px;
+  color: #1677FF;
+  font-size: 16px;
+  font-weight: 600;
+  flex-shrink: 0;
+  text-align: center;
+  margin-right: 8px;
+}
+
 .question-title {
-  font-size: 14px;
-  color: #4A5568;
+  font-size: 15px;
+  color: #1a1a1a;
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
