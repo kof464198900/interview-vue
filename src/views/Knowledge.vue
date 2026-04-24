@@ -123,13 +123,14 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   padding: 16px 20px;
-  background: #fff;
-  border-bottom: 1px solid #E8EBED;
+  background: linear-gradient(135deg, #2D3748 0%, #3D4F5F 50%, #2D3748 100%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   flex-shrink: 0;
 }
 
 .back-btn {
   font-size: 20px;
+  color: #fff;
   cursor: pointer;
   padding: 4px 8px;
 }
@@ -138,6 +139,7 @@ onMounted(async () => {
   font-size: 20px;
   font-weight: 600;
   margin-left: 8px;
+  color: #fff;
 }
 
 .stats-bar {
@@ -163,6 +165,7 @@ onMounted(async () => {
   font-size: 28px;
   font-weight: 600;
   line-height: 1;
+  color: #333;
 }
 
 .stat-label {
