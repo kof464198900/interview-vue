@@ -134,19 +134,20 @@ const loadDetail = async () => {
     console.error('获取题目详情失败', e)
   }
   
-  // 处理表格滚动
-  await nextTick()
-  const wrappers = document.querySelectorAll('.section-content table')
-  wrappers.forEach(table => {
-    if (!table.parentElement.classList.contains('table-drag-wrapper')) {
-      const wrapper = document.createElement('div')
-      wrapper.className = 'table-drag-wrapper'
-      table.parentNode.insertBefore(wrapper, table)
-      wrapper.appendChild(table)
-      wrapper.addEventListener('mousedown', startDrag)
-      wrapper.addEventListener('touchstart', startDrag, { passive: true })
-    }
-  })
+  // 处理表格滚动 - 双重确保DOM渲染完成
+  setTimeout(() => {
+    const tables = document.querySelectorAll('.section-content table')
+    tables.forEach(table => {
+      if (!table.parentElement.classList.contains('table-drag-wrapper')) {
+        const wrapper = document.createElement('div')
+        wrapper.className = 'table-drag-wrapper'
+        table.parentNode.insertBefore(wrapper, table)
+        wrapper.appendChild(table)
+        wrapper.addEventListener('mousedown', startDrag)
+        wrapper.addEventListener('touchstart', startDrag, { passive: true })
+      }
+    })
+  }, 50)
 }
 
 const toggleCollect = async () => {
@@ -398,7 +399,7 @@ watch(() => route.params.id, () => {
   font-size: 14px;
   color: #4A5568;
   line-height: 1.8;
-  overflow-x: hidden;
+  overflow-x: visible;
 }
 
 .section-content :deep(h1),
