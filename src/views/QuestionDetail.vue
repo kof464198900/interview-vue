@@ -133,6 +133,20 @@ const loadDetail = async () => {
   } catch (e) {
     console.error('获取题目详情失败', e)
   }
+  
+  // 处理表格滚动
+  await nextTick()
+  const wrappers = document.querySelectorAll('.section-content table')
+  wrappers.forEach(table => {
+    if (!table.parentElement.classList.contains('table-drag-wrapper')) {
+      const wrapper = document.createElement('div')
+      wrapper.className = 'table-drag-wrapper'
+      table.parentNode.insertBefore(wrapper, table)
+      wrapper.appendChild(table)
+      wrapper.addEventListener('mousedown', startDrag)
+      wrapper.addEventListener('touchstart', startDrag, { passive: true })
+    }
+  })
 }
 
 const toggleCollect = async () => {
@@ -200,18 +214,6 @@ const goBack = () => {
 onMounted(() => {
   loadDetail()
   loadQuestionList()
-  
-  setTimeout(() => {
-    const wrappers = document.querySelectorAll('.section-content table')
-    wrappers.forEach(table => {
-      const wrapper = document.createElement('div')
-      wrapper.className = 'table-drag-wrapper'
-      table.parentNode.insertBefore(wrapper, table)
-      wrapper.appendChild(table)
-      wrapper.addEventListener('mousedown', startDrag)
-      wrapper.addEventListener('touchstart', startDrag, { passive: true })
-    })
-  }, 100)
 })
 
 let isDragging = false
