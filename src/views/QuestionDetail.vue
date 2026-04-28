@@ -268,6 +268,9 @@ watch(() => route.params.id, () => {
   const idx = questionList.value.findIndex(q => String(q.id) === currentId)
   if (idx > -1) currentIndex.value = idx
   loadDetail()
+  
+  // 立即滚动到顶部
+  document.querySelector('.page-body')?.scrollTo(0, 0)
 })
 </script>
 
