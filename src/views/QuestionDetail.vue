@@ -335,7 +335,7 @@ watch(() => route.params.id, () => {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 20px;
+  padding: 15px;
   padding-bottom: 100px;
 }
 
@@ -382,6 +382,9 @@ watch(() => route.params.id, () => {
   margin-top: 16px;
   overflow: hidden;
   box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  width: 100%;
+  max-width: none;
+  box-sizing: border-box;
 }
 
 .section-title {
@@ -395,7 +398,8 @@ watch(() => route.params.id, () => {
 }
 
 .section-content {
-  padding: 16px 20px;
+  margin: 0;
+  padding: 16px 15px;
   font-size: 14px;
   color: #4A5568;
   line-height: 1.8;
