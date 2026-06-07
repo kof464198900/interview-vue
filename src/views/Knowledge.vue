@@ -214,7 +214,7 @@ onMounted(async () => {
 }
 
 .category-name {
-  font-size: 17px;
+  font-size: 15px;
   font-weight: 600;
   color: #1a1a1a;
 }
@@ -280,12 +280,12 @@ onMounted(async () => {
 }
 
 .question-title {
-  font-size: 15px;
+  font-size: 13px;
   color: #1a1a1a;
   flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  word-break: break-word;
+  white-space: normal;
+  line-height: 1.5;
 }
 
 .question-item:hover .question-title {
