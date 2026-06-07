@@ -97,7 +97,7 @@ onMounted(async () => {
     const catData = await getCategoryList()
     categoryList.value = catData || []
     
-    const qData = await getQuestionList({ page: 1, size: 100, hasOptions: false })
+    const qData = await getQuestionList({ page: 1, size: 500, hasOptions: false })
     questionList.value = qData?.records || []
     
     const expandId = route.query.expand
