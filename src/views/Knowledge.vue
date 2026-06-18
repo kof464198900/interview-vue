@@ -66,9 +66,11 @@
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { getCategoryList, getQuestionList } from '@/api'
+import { useQuestionStore } from '@/store/question'
 
 const router = useRouter()
 const route = useRoute()
+const questionStore = useQuestionStore()
 const categoryList = ref([])
 const questionList = ref([])
 const expandedCategories = ref([])
@@ -99,6 +101,7 @@ onMounted(async () => {
     
     const qData = await getQuestionList({ page: 1, size: 500, hasOptions: false })
     questionList.value = qData?.records || []
+    questionStore.setAllQuestions(questionList.value)
     
     const expandId = route.query.expand
     if (expandId) {

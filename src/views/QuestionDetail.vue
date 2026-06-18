@@ -46,6 +46,7 @@
 import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/store/user'
+import { useQuestionStore } from '@/store/question'
 import { getQuestionDetail, collectQuestion, uncollectQuestion, getQuestionList, getCollectList } from '@/api'
 import { showToast } from 'vant'
 import { marked } from 'marked'
@@ -77,6 +78,7 @@ const formatExtendKnowledge = (extend) => {
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
+const questionStore = useQuestionStore()
 
 const questionData = ref({})
 const questionList = ref([])
@@ -109,14 +111,19 @@ const getDifficultyText = (diff) => {
 const loadQuestionList = async () => {
   try {
     const from = route.query.from
-    let data
     if (from === 'collect') {
-      data = await getCollectList(userStore.userInfo.id, 1, 500)
+      const data = await getCollectList(userStore.userInfo.id, 1, 500)
       questionList.value = data?.records || []
     } else {
       const categoryId = route.query.categoryId
-      data = await getQuestionList({ page: 1, size: 500, categoryId })
-      questionList.value = data?.records || []
+      if (categoryId && questionStore.allQuestions.length > 0) {
+        questionList.value = questionStore.getQuestionsByCategory(categoryId)
+      } else if (!categoryId && questionStore.allQuestions.length > 0) {
+        questionList.value = [...questionStore.allQuestions]
+      } else {
+        const data = await getQuestionList({ page: 1, size: 500, categoryId })
+        questionList.value = data?.records || []
+      }
     }
     const currentId = String(route.params.id)
     const idx = questionList.value.findIndex(q => String(q.id) === currentId)
@@ -179,7 +186,6 @@ const goPrevQuestion = async () => {
     if (categoryId) query += (query ? '&' : '') + 'categoryId=' + categoryId
     if (currentIndex > 1) query += (query ? '&' : '') + 'index=' + (currentIndex - 1)
     await router.push('/question/' + String(id) + (query ? '?' + query : ''))
-    loadDetail()
   } else {
     showToast('已经是第一题了')
   }
@@ -196,7 +202,6 @@ const goNextQuestion = async () => {
     if (categoryId) query += (query ? '&' : '') + 'categoryId=' + categoryId
     if (currentIndex > 0) query += (query ? '&' : '') + 'index=' + (currentIndex + 1)
     await router.push('/question/' + String(id) + (query ? '?' + query : ''))
-    loadDetail()
   } else {
     showToast('已经是最后一题了')
   }
